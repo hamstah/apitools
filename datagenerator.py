@@ -7,6 +7,7 @@ class DataGenerator:
     number_range = [-50,50]
     string_range = [7,15]
     array_range = [5,10]
+    not_required_probability = 0.3
 
     string_charset = string.ascii_letters + string.digits + ' '
 
@@ -41,11 +42,21 @@ class DataGenerator:
     def random_integer(self, schema={}):
         minimum = schema.get("minimum", self.number_range[0])
         maximum = schema.get("maximum", self.number_range[1])
+        divisible_by = schema.get("divisibleBy", 1)
+
+        if schema.get("exclusiveMinimum",False):
+            minimum += 1
+
+        if schema.get("exclusiveMaximum", False):
+            maximum -= 1
+
+        if divisible_by == 0:
+            raise Exception("Can't generate a number divisible by 0")
 
         if minimum > maximum:
             maximum = minimum
         
-        return random.randint(minimum, maximum)
+        return random.randint(minimum/abs(divisible_by), maximum/abs(divisible_by))*divisible_by
 
     def random_boolean(self, schema={}):
         return bool(random.getrandbits(1))
@@ -70,16 +81,37 @@ class DataGenerator:
 
         min_items = schema.get("minItems", self.array_range[0])
         max_items = schema.get("maxItems", self.array_range[1])
+        
+        if min_items > max_items:
+            max_items = min_items
+
+        unique_items = schema.get("uniqueItems", False)
 
         count = random.randint(min_items, max_items)
         
-        return [ self.random_value(items_schema) for x in range(count)]
+        if unique_items:
+            max_tries = 100
+            res = []
+            for x in range(count):
+                tries = 0
+                while True:
+                    obj = self.random_value(items_schema)                
+                    if obj not in res:
+                        break
+                    tries += 1
+                    if tries > max_tries:
+                        raise Exception("Failed to generate the required number of unique items")
+                res.append(obj)
+            return res
+                
+        return [self.random_value(items_schema) for x in range(count)]
     
     def random_object(self, schema):
         obj = {}
 
         for prop_name, prop_schema in schema.get("properties",[]).items():
-            obj[prop_name] = self.random_value(prop_schema)
+            if prop_schema.get("required",False) or random.random() <= self.not_required_probability:
+                obj[prop_name] = self.random_value(prop_schema)
         return obj
     
 
@@ -93,9 +125,9 @@ if __name__ == "__main__":
 
     # Same with basic properties
     print generator.random_value({"type":"number", "minimum":50})
+    print generator.random_value({"type":"integer", "divisibleBy":-23, "minimum":-69})
     print generator.random_value({"type":"string", "maxLength":20, "minLength":15})
     
-
     # Generates a random array of string
     print generator.random_value({"type":"array", "items": {"type":"string"}})
 
@@ -108,3 +140,7 @@ if __name__ == "__main__":
 
     # Generates an array of search_result
     print generator.random_value({"type":"array", "items":{"type":"search_result"}})
+
+    store.add_schema({"type":"integer", "name":"small_integer", "minimum":0,"maximum":9})
+    print generator.random_value({"type":"array", "uniqueItems":True, "minItems":10, "items":{"type":"small_integer"}})
+
