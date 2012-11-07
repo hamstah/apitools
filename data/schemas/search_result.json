@@ -1,0 +1,21 @@
+{
+    "name":"search_result",
+    "description":"A product search result",
+    "type":"object",
+    "properties": {
+	"name": {
+	    "type":"string",
+	    "required":true
+	},
+	"reference": {
+	    "type":"integer",
+	    "minimum":1,
+	    "required":true
+	},
+	"price": {
+	    "type":"number",
+	    "minimum": 0,
+	    "required":true
+	}
+    }
+}
