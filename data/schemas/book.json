@@ -1,0 +1,36 @@
+{
+    "name":"book",
+    "description":"A book metadata",
+    "type":"object",
+    "properties": {
+	"title": {
+	    "type":"string",
+	    "required":true
+	},
+
+	"authors" : {
+	    "type": "array",
+	    "items": {
+		"type":"string"
+	    },
+	    "required":true
+	},
+	    
+	"isbn" : {
+	    "type":"string",
+	    "required":true,
+	    "pattern":"^\\d{12}[\\d|X]$"
+	}
+
+    },
+    "links" : [
+	{
+	    "rel":"self",
+	    "href":"books/{isbn}"
+	},
+	{
+	    "rel":"instances",
+	    "href": "books"
+	}
+    ]
+}
