@@ -1,7 +1,13 @@
 import random
 import string
+import os
+import sys
+
+sys.path.insert(0,os.path.join(os.path.dirname(__file__),"dependencies/rstr"))
 
 from schemasstore import SchemasStore
+
+import rstr
 
 class DataGenerator:
     number_range = [-50,50]
@@ -14,7 +20,7 @@ class DataGenerator:
     basic_types = ["string", "boolean", "number", "integer"]
 
     def __init__(self, schemas_store=None):
-        self.schemas_store = schemas_store#
+        self.schemas_store = schemas_store
 
     def random_value(self, schema):
         if isinstance(schema, basestring):
@@ -62,6 +68,9 @@ class DataGenerator:
         return bool(random.getrandbits(1))
 
     def random_string(self, schema={}):
+        pattern = schema.get("pattern",None)
+        if "pattern" in schema:
+            return rstr.xeger(schema["pattern"])
 
         min_length = schema.get("minLength", self.string_range[0])
         max_length = schema.get("maxLength", self.string_range[1])
@@ -71,7 +80,6 @@ class DataGenerator:
         
         length = random.randint(min_length, max_length)
         return ''.join(random.choice(self.string_charset) for x in range(length))
-
 
     def random_array(self, schema):
         items_type = schema["items"]["type"]
@@ -144,3 +152,4 @@ if __name__ == "__main__":
     store.add_schema({"type":"integer", "name":"small_integer", "minimum":0,"maximum":9})
     print generator.random_value({"type":"array", "uniqueItems":True, "minItems":10, "items":{"type":"small_integer"}})
 
+    print generator.random_value({"type":"string", "pattern": "^[a-zA-Z]{10}[0-5]{,7}$"})

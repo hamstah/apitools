@@ -12,8 +12,4 @@
 * exclusiveMinimum
 * exclusiveMaximum
 
-#### random_string
-
-* pattern
-
 
