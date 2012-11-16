@@ -12,6 +12,10 @@ See TODO.md for what is likely to be implemented next.
 
 Class to generate links defined in the links section of a json-schema.
 
+### invaliddatagenerator
+
+Class to generate invalid data for a given schema
+
 ## Dependencies
 
 run init.sh in dependencies
