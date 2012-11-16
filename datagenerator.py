@@ -45,6 +45,30 @@ class DataGenerator:
         
         return random.uniform(minimum, maximum)
 
+    def random_schema(self):
+        schema = {"properties":{}, "type":"object"}
+        schema["name"] = self.random_string({"pattern":"^[a-zA-Z]{15}$"})
+
+        nb_properties = self.random_integer({"minimum":1,"maximum":5})
+        for i in range(nb_properties):
+            prop_type = random.choice([
+                "number",
+                "boolean",
+                "integer",
+                "string",
+                ])
+
+            prop_required = self.random_boolean()
+            prop_def = {"type":prop_type, "required":prop_required}
+
+            while True:
+                prop_name =  self.random_string({"pattern":"[a-zA-Z][a-zA-Z]{1,7}"})
+                if prop_name not in schema["properties"]:
+                    schema["properties"][prop_name] = prop_def
+                    break
+
+        return schema
+
     def random_integer(self, schema={}):
         minimum = schema.get("minimum", self.number_range[0])
         maximum = schema.get("maximum", self.number_range[1])
@@ -153,3 +177,8 @@ if __name__ == "__main__":
     print generator.random_value({"type":"array", "uniqueItems":True, "minItems":10, "items":{"type":"small_integer"}})
 
     print generator.random_value({"type":"string", "pattern": "^[a-zA-Z]{10}[0-5]{,7}$"})
+
+    r_schema = generator.random_schema()
+    print r_schema
+
+    print generator.random_value(r_schema)
