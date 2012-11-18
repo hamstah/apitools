@@ -48,67 +48,57 @@ class ResourceServer:
         model = self.model_generator.generate(self.db, schema)
         setattr(self, schema["name"], model)
 
-        for rel,href in model.links.items():
-            if rel == "root":
-                continue
-            
+        def add_route(fn, methods=["GET"]):
             # transform the link href into a flask route
-            href = utils.url_to_flask_route(href, schema)
+            href = utils.url_to_flask_route(model.links[fn.__name__.replace("r_","")], schema)
+            fn.methods = methods
+            self.app.add_url_rule(href, fn.__name__, fn)
 
-            fn = None
-            # generate routes automatically for some of the links
-            if rel == "instances":
-                # returns all the instances of the model
-                def r_instances(**kwargs):
-                    return json.dumps([res.properties() for res in model.query.all()])
-                r_instances.methods = ["GET"]
-                fn = r_instances
+        # generate routes automatically for some of the links
+        if "instances" in model.links:
+            # returns all the instances of the model
+            def r_instances(**kwargs):
+                return json.dumps([res.properties() for res in model.query.all()])
+            add_route(r_instances)
 
-            elif rel == "self":
-                # returns an instance of the object by key
-                # if used with OPTIONS, returns the json-schema
-                def r_self(**kwargs):
-                    if len(kwargs.keys()) != 1:
-                        raise Exception("Self link with multiple arguments not supported")
-                    res = model.query.filter_by(**kwargs).first()
-                    if not res:
-                        abort(404)
-                    if request.method == "GET":
-                        return json.dumps(res.properties())
-                    elif request.method == "OPTIONS":
-                        return json.dumps(res.schema())
-                    elif request.method == "DELETE":
-                        self.delete(res)
-                        return ("",204)
+        if "self" in model.links:
+            # returns an instance of the object by key
+            # if used with OPTIONS, returns the json-schema
+            def r_self(**kwargs):
+                if len(kwargs.keys()) != 1:
+                    raise Exception("Self link with multiple arguments not supported")
+                res = model.query.filter_by(**kwargs).first()
+                if not res:
+                    abort(404)
+                if request.method == "GET":
+                    return json.dumps(res.properties())
+                elif request.method == "OPTIONS":
+                    return json.dumps(res.schema())
+                elif request.method == "DELETE":
+                    self.delete(res)
+                    return ("",204)
+            add_route(r_self, ["GET", "OPTIONS", "DELETE"])
 
-                r_self.methods = ["GET", "OPTIONS", "DELETE"]
-                fn = r_self
-                
-            elif rel == "create":
-                # creates a new instance
-                def r_create(**kwargs):
-                    try:
-                        # this is ok as the model checks the input in __init__
-                        new_obj = model(**dict(request.form.items()))
+        if "create" in model.links:
+            # creates a new instance
+            def r_create(**kwargs):
+                try:
+                    # this is ok as the model checks the input in __init__
+                    new_obj = model(**dict(request.form.items()))
 
-                        # saves the object and return
-                        self.add(new_obj)
-                        return (json.dumps(new_obj.key_dict()),
-                                201,
-                                {"link": "<%s%s>; rel=\"self\""%(self.host_str(),new_obj.self_link())}
-                                )
-                    
-                    except exc.IntegrityError:
-                        # should check for different types of failures and return 400
-                        # can be duplicate on the primary key, or one of the
-                        # constraints on the data failing
-                        abort(409)
+                    # saves the object and return
+                    self.add(new_obj)
+                    return (json.dumps(new_obj.key_dict()),
+                            201,
+                            {"link": "<%s%s>; rel=\"self\""%(self.host_str(),new_obj.self_link())}
+                            )
+                except exc.IntegrityError:
+                    # should check for different types of failures and return 400
+                    # can be duplicate on the primary key, or one of the
+                    # constraints on the data failing
+                    abort(409)
 
-                r_create.methods = ["POST"]
-                fn = r_create
-                
-            if fn:
-                self.app.add_url_rule(href, fn.__name__, fn)
+            add_route(r_create, ["POST"])
 
 if __name__ == "__main__":
     
