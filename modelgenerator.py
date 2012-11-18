@@ -80,7 +80,7 @@ class ModelGenerator:
             # store the links
             # - the json-schema format with root in links[<rel>]
             # - add helper lambdas to generate actual links under link_<rel>
-            root = rel_links["root"]
+            root = attribs["links"]["root"] = rel_links["root"]
             for rel, (href, template_href) in rel_links.items():
                   if rel != "root":
                         (json_base, template_base) = root
