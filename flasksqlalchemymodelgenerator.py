@@ -5,7 +5,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
 db = SQLAlchemy(app)
 
-from modelgenerator import ModelGenerator, ValidationException
+from modelgenerator import ModelGenerator, ValidationError, UnknownPropertyError, MissingRequiredPropertyError
 
 class FlaskSQLAlchemyModelGenerator(ModelGenerator):
 
@@ -14,11 +14,26 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
 
     def generate(self, db, schema):
 
+        def init(obj, **kwargs):
+            # set the attributes
+            for key, value in kwargs.items():
+                if key not in properties:
+                    raise UnknownPropertyError(schema["name"],key)
+                setattr(obj, key, value)
+
+            # check that all the required args are present
+            for required_prop in [prop_key for prop_key, prop_schema in properties.items()
+                                  if prop_schema.get("required",False)]:
+                if required_prop not in kwargs.keys():
+                    raise MissingRequiredPropertyError(schema["name"], required_prop)
+
+
         attribs = {
             # default columns for all models
             "id" : db.Column(db.Integer, primary_key=True),
 
             # utils
+            "__init__": init,
             "__repr__" : lambda obj:
             "<%s %s>"%(obj.__class__.__name__,
                        ','.join(["%s=%s"%(attr_name, getattr(obj, attr_name))
@@ -46,7 +61,7 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
                      }[schema["type"]]
 
         # create the column
-        required = "required" in schema and schema["required"]
+        required = schema.get("required", False)
         return db.Column(sqla_type, nullable=not required)
 
 
@@ -72,14 +87,12 @@ if __name__ == "__main__":
                 },
             "price": {
                 "type":"number",
-                "required":True,
                 "minimum":0
                 },
             "name": {
                 "type":"string",
                 "minLength": 3,
                 "maxLength": 7,
-                "required":True,
                 },
             "code": {
                 "type":"string",
@@ -93,7 +106,7 @@ if __name__ == "__main__":
     model = generator.generate(db,schema)
 
 
-    test = model()
+    test = model(code="12345", in_stock=True, reference=6, price=2.2)
 
     test.reference = 2
 
@@ -102,14 +115,14 @@ if __name__ == "__main__":
         test.reference = 0
         print "0 not allowed"
         assert False
-    except ValidationException as e:
+    except ValidationError as e:
         pass
 
     try:
         test.reference = -7
         print "<0 not allowed"
         assert False
-    except ValidationException as e:
+    except ValidationError as e:
         pass
 
     # > 5 isn't allowed
@@ -117,7 +130,7 @@ if __name__ == "__main__":
         test.reference = 7
         print ">6 not allowed"
         assert False
-    except ValidationException as e:
+    except ValidationError as e:
         pass
 
     # 6 is allowed
@@ -127,21 +140,21 @@ if __name__ == "__main__":
         test.reference = 5
         print "5 not divisible by 2"
         assert False
-    except ValidationException as e:
+    except ValidationError as e:
         pass
 
     try:
         test.name = "a"
         print "too short"
         assert False
-    except ValidationException as e:
+    except ValidationError as e:
         pass
 
     try:
         test.name = "12345678"
         print "too long"
         assert False
-    except ValidationException as e:
+    except ValidationError as e:
         pass
 
     test.name = "a2c4"
@@ -150,7 +163,7 @@ if __name__ == "__main__":
         test.code = "aaaa"
         print "wrong pattern"
         assert False
-    except ValidationException as e:
+    except ValidationError as e:
         pass
 
     test.code = "ABCD5"
