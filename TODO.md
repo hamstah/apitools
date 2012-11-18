@@ -22,6 +22,11 @@
 * Make it compatible with vanilla sqlalchemy
 * Verify nullable values
 
+### resourceserver
+
+* Listing of the resource on OPTIONS of /
+* Add schema on OPTIONS of /resource
+
 ### Tests and documents
 
 
