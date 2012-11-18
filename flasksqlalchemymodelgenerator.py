@@ -35,12 +35,12 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
                                  for attr_name in properties.keys()])),
             "properties": lambda obj:
                 dict((k, v) for k,v in obj.__dict__.iteritems() if k in properties.keys()),
-            "key" : lambda obj:
+            "key_value" : lambda obj:
                 getattr(obj, obj.key_name),
             "key_dict": lambda obj:
-                {obj.key_name: obj.key()},
+                {obj.key_name: obj.key_value()},
             "self_link" : lambda obj:
-                obj.resource_url and obj.resource_url.replace("{"+obj.key_name+"}", obj.key()),
+                obj.resource_url and obj.resource_url.replace("{"+obj.key_name+"}", obj.key_value()),
             "schema": lambda obj:
                 schema
             }
@@ -53,13 +53,16 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
         except Exception as e:
             key_name = "id"
             while key_name in properties.keys():
-                key_name = "_" + key_name
+                key_name = '_' + key_name
 
+        if key_name not in properties.keys():
+            # create a primary key if not self link was present
+            # or if it refers to a property that doesn't exist
             attribs[key_name] = db.Column(db.Integer, primary_key=True)
 
         # add columns and validators from the schema properties
         for property_name, property_schema in properties.items():
-            column = self.generate_column(db, property_name, property_schema, property_name==key_name)
+            column = self.generate_column(db, property_schema, property_name==key_name)
             attribs[property_name] = column
 
             validator = self.generate_validator(property_name, property_schema)
@@ -71,7 +74,7 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
         model.resource_url = resource_url
         return model
 
-    def generate_column(self, db, name, schema, primary):
+    def generate_column(self, db, schema, primary):
         # convert from json-schema type to SQLAlchemy type
         sqla_type = {"integer":db.Integer,
                      "number":db.Float,
