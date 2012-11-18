@@ -14,11 +14,6 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
         key_name = attribs["key_name"]
         properties = schema.get("properties",{})
 
-        if key_name not in properties.keys():
-            # create a primary key if not self link was present
-            # or if it refers to a property that doesn't exist
-            attribs[key_name] = db.Column(db.Integer, primary_key=True)
-
         # add columns and validators from the schema properties
         for property_name, property_schema in properties.items():
             attribs[property_name] = self.generate_column(db, property_schema, 
@@ -28,7 +23,7 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
             if validator:
                 attribs[validator.__name__] = orm.validates(property_name)(validator)
 
-        model = type(schema["name"],(db.Model,), attribs)
+        model = type(str(schema["name"]),(db.Model,), attribs)
         return model
 
     def generate_column(self, db, schema, primary):

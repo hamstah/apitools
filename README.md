@@ -27,7 +27,7 @@ Generate SQLAlchemy models to be used with flask-sqlalchemy from a schema
 ### resourceserver
 
 Class to implement the REST api of resources defined in a schema.
-Supports creation, retrieval, deletion, listing of instances and schema
+Supports creation, update, retrieval, deletion, listing of instances and schema
 
 ## Dependencies
 

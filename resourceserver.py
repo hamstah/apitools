@@ -4,8 +4,10 @@ from flask.ext.sqlalchemy import SQLAlchemy, orm
 
 import json
 import re
+import sys
 
 from flasksqlalchemymodelgenerator import FlaskSQLAlchemyModelGenerator
+from modelgenerator import ValidationError, UnknownPropertyError, MissingRequiredPropertyError, ReadOnlyPropertyError
 import utils
 
 class ResourceServer:
@@ -38,6 +40,10 @@ class ResourceServer:
         self.db.session.delete(resource)
         self.db.session.commit()
 
+    def save(self):
+        """Shortcut to save a changes to the database"""
+        self.db.session.commit()
+
     def host_str(self):
         return "http://%s:%d"%(self.host, self.port)
 
@@ -50,15 +56,18 @@ class ResourceServer:
 
         def add_route(fn, methods=["GET"]):
             # transform the link href into a flask route
-            href = utils.url_to_flask_route(model.links[fn.__name__.replace("r_","")], schema)
+            href = utils.url_to_flask_route(model.links[fn.__name__.replace("r_","")], model)
             fn.methods = methods
             self.app.add_url_rule(href, fn.__name__, fn)
+
+        def input_error(error, code=400):
+            return (json.dumps({"error":str(error)}), code)
 
         # generate routes automatically for some of the links
         if "instances" in model.links:
             # returns all the instances of the model
             def r_instances(**kwargs):
-                return json.dumps([res.properties() for res in model.query.all()])
+                return json.dumps([res.properties_values() for res in model.query.all()])
             add_route(r_instances)
 
         if "self" in model.links:
@@ -70,14 +79,31 @@ class ResourceServer:
                 res = model.query.filter_by(**kwargs).first()
                 if not res:
                     abort(404)
+
                 if request.method == "GET":
-                    return json.dumps(res.properties())
+                    return json.dumps(res.properties_values())
                 elif request.method == "OPTIONS":
-                    return json.dumps(res.schema())
+                    return json.dumps(res.schema)
                 elif request.method == "DELETE":
                     self.delete(res)
                     return ("",204)
-            add_route(r_self, ["GET", "OPTIONS", "DELETE"])
+                elif request.method == "PUT":
+                    for key, value in dict(request.form.items()).items():
+                        # don't let the update change readonly
+                        # properties like the primary key
+                        if not res.updatable(key):
+                            return input_error("%s's value can't be updated"%key)
+                        try:
+                            setattr(res, key, value)
+                        except exc.IntegrityError as error:
+                            # one of the constraint failed
+                            return input_error(error)
+                        except ValidationError as error:
+                            return input_error(error)
+
+                    self.save()
+                    return ("",200)
+            add_route(r_self, ["GET", "OPTIONS", "DELETE","PUT"])
 
         if "create" in model.links:
             # creates a new instance
@@ -90,67 +116,34 @@ class ResourceServer:
                     self.add(new_obj)
                     return (json.dumps(new_obj.key_dict()),
                             201,
-                            {"link": "<%s%s>; rel=\"self\""%(self.host_str(),new_obj.self_link())}
+                            {"Location": "%s%s"%(self.host_str(),new_obj.self_link())}
                             )
-                except exc.IntegrityError:
+                except ValidationError as error:
+                    return input_error(error)
+                except exc.IntegrityError as error:
                     # should check for different types of failures and return 400
                     # can be duplicate on the primary key, or one of the
                     # constraints on the data failing
-                    abort(409)
+                    input_error(error, 409)
+                except MissingRequiredPropertyError as error:
+                    return input_error(error)
+                except UnknownPropertyError as error:
+                    return input_error(error)
+                except ReadOnlyPropertyError as error:
+                    return input_error(error)
 
             add_route(r_create, ["POST"])
+        return model
 
 if __name__ == "__main__":
     
-    schema = {
-        "name":"book",
-        "description":"A book metadata",
-        "type":"object",
-        "properties": {
-            "title": {
-                "type":"string",
-                "required":True
-                },
-            
-            "isbn" : {
-                "type":"string",
-                "required":True,
-                "pattern":"^\\d{12}[\\d|X]$"
-                }
-
-            },
-        "links" : [
-            {
-                "rel":"root",
-                "href":"/books"
-                },
-            {
-                "rel":"self",
-                "href":"{isbn}",
-                },
-            {
-                "rel":"instances",
-                "href": ""
-                },
-            {
-                "rel":"create",
-                "href":""
-                },
-            ]
-        }
-
     server = ResourceServer()
-    server.add_resource(schema)
+
+    for path in sys.argv[1:]:
+        schema = json.loads(open(path).read())
+        server.add_resource(schema)
+        print "Added %s"%schema["name"]
+
     server.db.create_all()
-
-    book_model = server.book
-
-    if len(book_model.query.all()) == 0:
-        book = book_model(title="title", isbn="1234567890123")
-        server.add(book)
-
-
     server.run(debug=True)
-
-    
     

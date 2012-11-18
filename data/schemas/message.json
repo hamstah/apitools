@@ -1,0 +1,33 @@
+{
+    "name":"message",
+    "description":"Simple message structure",
+    "type":"object",
+    "properties": {
+        "text": {
+            "type":"string",
+            "required":true,
+	    "maxLength":140
+        },
+	"recipient" : {
+	    "type":"string",
+	    "required":true,
+	    "pattern":"0[0-9]{10}"
+	}
+    },
+    "links" : [
+        {
+            "rel":"root",
+            "href":"/messages"
+        },
+        {
+            "rel":"self",
+            "href":"{id}"
+        },
+        {
+            "rel":"instances"
+        },
+        {
+            "rel":"create"
+        }
+    ]
+}

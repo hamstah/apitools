@@ -9,10 +9,17 @@ class ValidationError(Exception):
 class UnknownPropertyError(Exception):
       def __init__(self, type_name, property_name):
             Exception.__init__(self, "%s does not have a '%s' property"%(type_name, property_name))
+            self.property_name = property_name
 
 class MissingRequiredPropertyError(Exception):
       def __init__(self, type_name, property_name):
             Exception.__init__(self, "%s is required in %s"%(property_name,type_name))
+            self.property_name = property_name
+
+class ReadOnlyPropertyError(Exception):
+      def __init__(self, type_name, property_name):
+            Exception.__init__(self, "%s is read only in %s"%(property_name,type_name))
+            self.property_name = property_name
 
 class ModelGenerator:
 
@@ -26,6 +33,9 @@ class ModelGenerator:
                   for key, value in kwargs.items():
                         if key not in properties:
                               raise UnknownPropertyError(schema["name"],key)
+                        if key == key_name and implicit_key:
+                              raise ReadOnlyPropertyError(schema["name"],key)
+
                         setattr(obj, key, value)
 
                   # check that all the required args are present
@@ -35,20 +45,26 @@ class ModelGenerator:
                               raise MissingRequiredPropertyError(schema["name"], required_prop)
 
             properties = schema.get("properties",{})
+            implicit_key = False
             attribs = {
                   "__init__": init,
                   "__repr__" : lambda obj:
                         "<%s %s>"%(obj.__class__.__name__,
                                    ','.join(["%s=%s"%(attr_name, getattr(obj, attr_name))
                                              for attr_name in properties.keys()])),
-                  "properties": lambda obj:
+                  "properties": properties,
+                  "properties_values": lambda obj:
                         dict((k, v) for k,v in obj.__dict__.iteritems() if k in properties.keys()),
+                  "updatable":lambda obj, key:
+                        key in properties.keys() and key != obj.key_name,
+                  "writable": lambda obj, key:
+                        key in properties.keys() and key != obj.key_name or not obj["implicit_key"],
+                  "implicit_key": implicit_key,
                   "key_value" : lambda obj:
                         getattr(obj, obj.key_name),
                   "key_dict": lambda obj:
                         {obj.key_name: obj.key_value()},
-                  "schema": lambda obj:
-                        schema,
+                  "schema": schema,
                   "links":{},
                   }
 
@@ -58,7 +74,7 @@ class ModelGenerator:
                   rel = schema_link.get("rel",None)
                   if not rel:
                         continue
-                  href = schema_link["href"]
+                  href = schema_link.get("href","")
                   rel_links[rel] = (href, utils.url_to_template(href))
 
             # store the links
@@ -72,26 +88,24 @@ class ModelGenerator:
                               json_base += "/"+href
                               template_base += "/"+template_href
                         attribs["links"][rel] = json_base
-                        attribs["%s_link"%rel] = lambda obj, template_base=template_base: template_base%obj.properties()
+                        attribs["%s_link"%rel] = lambda obj, template_base=template_base: template_base%obj.properties_values()
 
             # find the primary key from the "self" link
             # or create one with a new column
-            (key_name, resource_url) = (None,None)
             try:
-                  (key_name, resource_url) = utils.get_resource_key(schema)
+                  key_name = utils.get_resource_key(schema)
             except Exception as e:
-                  print e
                   key_name = "id"
                   while key_name in properties.keys():
                         key_name = '_' + key_name
 
-            attribs.update({
-                        "key_name":key_name,
-                        "resource_url":resource_url
-                        })
+            # add a new property for the key if it doesn't exist
+            if key_name not in properties:
+                  properties[key_name] = {"type":"integer","minimum":0}
+                  implicit_key = True
 
+            attribs["key_name"] = key_name
             return attribs
-
 
       def generate_validator(self, name, schema):
             attr_name = "%s_tests"%schema["type"]
@@ -127,7 +141,7 @@ class ModelGenerator:
                                                                           "test_value":test_value,
                                                                           "value":value})
                   return value
-            fn.__name__ = "validate_%s"%(name)
+            fn.__name__ = str("validate_%s"%(name))
             return fn
 
       def number_tests(self, schema):
