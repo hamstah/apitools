@@ -20,7 +20,6 @@
 
 * Find a better name
 * Make it compatible with vanilla sqlalchemy
-* Add __init__ to the model
 * Verify nullable values
 
 ### Tests and documents
