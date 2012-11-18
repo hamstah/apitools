@@ -1,42 +1,42 @@
 Utilities to make defining apis easier
 
-## Tools
+# Tools
 
-### datagenerator 
+## datagenerator 
 
 Class to generate random values given a json-schema.
 Doesn't support all json-schema monstruousities, only a subset I find useful.
 See TODO.md for what is likely to be implemented next.
 
-### urlsgenerator
+## urlsgenerator
 
 Class to generate links defined in the links section of a json-schema.
 
-### invaliddatagenerator
+## invaliddatagenerator
 
 Class to generate invalid data for a given schema
 
-### modelgenerator
+## modelgenerator
 
 Base class to generate models from a schema
 
-### flasksqlalchemymodelgenerator
+## flasksqlalchemymodelgenerator
 
 Generate SQLAlchemy models to be used with flask-sqlalchemy from a schema
 
-### resourceserver
+## resourceserver
 
 Class to implement the REST api of resources defined in a schema.
 Supports creation, update, retrieval, deletion, listing of instances and schema
 
-#### Usage
+### Usage
 
 Run the server using
 ```
 $ python resourceserver.py [jsonfile1, jsonfile2, ...]
 ```
 
-#### Example using data/schemas/message.json
+### Example using data/schemas/message.json
 
 ```
 $ python resourceserver.py data/schemas/message.json
@@ -44,7 +44,7 @@ Added message
  * Running on http://0.0.0.0:5000/
 ```
 
-##### Create a new message
+#### Create a new message
 
 ```
 $ curl -i -X POST    http://0.0.0.0:5000/messages -d "recipient=07771818335&text=nice message"
@@ -60,7 +60,7 @@ Date: Sun, 18 Nov 2012 19:28:56 GMT
 }
 ```
 
-##### List messages
+#### List messages
 
 ```
 $ curl -i -X GET     http://0.0.0.0:5000/messages
@@ -76,7 +76,7 @@ Date: Sun, 18 Nov 2012 19:32:09 GMT
 ]
 ```
 
-##### Retrieve a message
+#### Retrieve a message
 
 ```
 $ curl -i -X GET     http://0.0.0.0:5000/messages/2
@@ -93,7 +93,7 @@ Date: Sun, 18 Nov 2012 19:35:42 GMT
 }
 ```
 
-##### Get the json-schema of a message
+#### Get the json-schema of a message
 
 ```
 $ curl -i -X OPTIONS http://0.0.0.0:5000/messages/2
@@ -142,7 +142,7 @@ Date: Sun, 18 Nov 2012 19:37:06 GMT
 }
 ```
 
-##### Update a message
+#### Update a message
 
 Supports partial updates
 
@@ -155,7 +155,7 @@ Server: Werkzeug/0.8.3 Python/2.7.3
 Date: Sun, 18 Nov 2012 19:38:02 GMT
 ```
 
-##### Delete a message
+#### Delete a message
 
 ```
 $ curl -i -X DELETE  http://0.0.0.0:5000/messages/2
@@ -166,9 +166,9 @@ Server: Werkzeug/0.8.3 Python/2.7.3
 Date: Sun, 18 Nov 2012 19:38:38 GMT
 ```
 
-#### Errors examples
+### Errors examples
 
-##### Trying to set an implicit key
+#### Trying to set an implicit key
 
 The message.json doesn't define an explicit primary key, but defines `id` as the key in the `rel=self` link.
 Each message then gets an additional `id` key managed by the server.
@@ -187,7 +187,7 @@ Date: Sun, 18 Nov 2012 19:43:48 GMT
   "error": "id is read only in message"
 }
 ```
-##### Trying to create or update unknown properties
+#### Trying to create or update unknown properties
 
 ```
 $ curl -i -X POST    http://0.0.0.0:5000/messages   -d "recipient=07771818335&tet=nice message&haxxy=foo"
@@ -203,7 +203,7 @@ Date: Sun, 18 Nov 2012 19:56:19 GMT
 }
 ```
 
-##### Trying to create or update properties with values not respecting constraints
+#### Trying to create or update properties with values not respecting constraints
 
 ```
 $ curl -i -X PUT     http://0.0.0.0:5000/messages/1 -d "recipient=0notanumber&text=nice message"
@@ -219,7 +219,7 @@ Date: Sun, 18 Nov 2012 20:03:34 GMT
 }
 ```
 
-##### Trying to create a message without all the required properties
+#### Trying to create a message without all the required properties
 
 ```
 $ curl -i -X POST    http://0.0.0.0:5000/messages -d "recipient=012345678901"HTTP/1.0 400 BAD REQUEST
@@ -233,12 +233,12 @@ Date: Sun, 18 Nov 2012 20:06:00 GMT
 }
 ```
 
-## Dependencies
+# Dependencies
 
-### Required
+## Required
 run init.sh in dependencies
 
-### Optional
+## Optional
 
 Needed for flasksqlalchemymodelgenerator and resourceserver only
 
