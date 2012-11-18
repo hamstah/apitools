@@ -1,3 +1,5 @@
+import re
+
 class ValidationException(Exception):
       
       def __init__(self, type_name, value, message):
@@ -56,5 +58,13 @@ class ModelGenerator:
                   "exclusiveMinimum" : (lambda value, test_value: value != schema["minimum"], message),
                   "exclusiveMaximum" : (lambda value, test_value: value != schema["maximum"], message),              
                   }    
+            return tests
+
+      def string_tests(self, schema):
+            tests = {
+                  "minLength": (lambda value, test_value: len(value) >= test_value, "length must be >= %(test_value)s"),
+                  "maxLength": (lambda value, test_value: len(value) <= test_value, "length must be <= %(test_value)s"),                  
+                  "pattern": (lambda value, test_value: re.match(test_value, value), "must match %(test_value)r"),
+                  }
             return tests
 
