@@ -24,6 +24,10 @@ Base class to generate models from a schema
 
 Generate SQLAlchemy models to be used with flask-sqlalchemy from a schema
 
+## backbonemodelgenerator
+
+Generate models and collections for Backbone.js
+
 ## resourceserver
 
 Class to implement the REST api of resources defined in a schema.
@@ -240,7 +244,10 @@ run init.sh in dependencies
 
 ## Optional
 
-Needed for flasksqlalchemymodelgenerator and resourceserver only
+### flasksqlalchemymodelgenerator and resourceserver
 
 flask-sqlalchemy is required, use flasksqlalchemy-requirements.txt with virtualenv
 
+### backbonemodelgenerator
+
+jinja2 is required, comes with flask if you use the flasksqlalchemy-requirements.txt
