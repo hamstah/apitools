@@ -69,7 +69,9 @@ class ResourceServer:
         if "instances" in model.links:
             # returns all the instances of the model
             def r_instances(**kwargs):
-                return jsonify([res.properties_values() for res in model.query.all()])
+                return (json.dumps([res.properties_values() for res in model.query.all()]), 
+                        200,
+                        {"Content-Type":"application/json"})
             add_route(r_instances)
 
         if "self" in model.links:
@@ -93,8 +95,11 @@ class ResourceServer:
                     for key, value in dict(request.form.items()).items():
                         # don't let the update change readonly
                         # properties like the primary key
+                        if key not in res.properties:
+                            return input_error(UnknownPropertyError(res.__class__.__name__, key))
+
                         if not res.updatable(key):
-                            return input_error("%s's value can't be updated"%key)
+                            return input_error(ReadOnlyPropertyError(res.__class__.__name__, key))
                         try:
                             setattr(res, key, value)
                         except exc.IntegrityError as error:

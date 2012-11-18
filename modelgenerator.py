@@ -4,7 +4,7 @@ import utils
 
 class ValidationError(Exception):
       def __init__(self, type_name, value, message):
-            Exception.__init__(self, "%s is an invalid %s value: %s"%(value, type_name, message))
+            Exception.__init__(self, "'%s' is an invalid %s value: %s"%(value, type_name, message))
 
 class UnknownPropertyError(Exception):
       def __init__(self, type_name, property_name):
