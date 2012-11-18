@@ -35,3 +35,19 @@ def get_resource_key(schema):
 
     raise Exception("No self link in schema")
     
+
+def url_to_flask_route(url, schema):
+    args = get_url_args(url)
+
+    # transform the link url into a flask route
+    for arg_name in args:
+        arg_schema = schema["properties"][arg_name]
+        flask_type = {"integer":"int",
+                      "number":"float",
+                      "string":"string"
+                      }[arg_schema["type"]]
+        url=url.replace("{%s}"%arg_name, "<%s:%s>"%(flask_type, arg_name))
+    return url
+
+def url_to_template(url):
+    return re.sub(r"\{([a-zA-Z_]+)\}",r"%(\1)s", url)

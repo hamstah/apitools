@@ -1,6 +1,6 @@
 import re
 
-from utils import get_resource_key
+import utils
 
 class ValidationError(Exception):
       def __init__(self, type_name, value, message):
@@ -47,17 +47,38 @@ class ModelGenerator:
                         getattr(obj, obj.key_name),
                   "key_dict": lambda obj:
                         {obj.key_name: obj.key_value()},
-                  "self_link" : lambda obj:
-                        obj.resource_url and obj.resource_url.replace("{"+obj.key_name+"}", obj.key_value()),
                   "schema": lambda obj:
-                        schema
+                        schema,
+                  "links":{},
                   }
+
+            # process the links section
+            rel_links = {"root":("/","/")} # provide default root if none is given
+            for schema_link in schema.get("links",[]):
+                  rel = schema_link.get("rel",None)
+                  if not rel:
+                        continue
+                  href = schema_link["href"]
+                  rel_links[rel] = (href, utils.url_to_template(href))
+
+            # store the links
+            # - the json-schema format with root in links[<rel>]
+            # - add helper lambdas to generate actual links under link_<rel>
+            root = rel_links["root"]
+            for rel, (href, template_href) in rel_links.items():
+                  if rel != "root":
+                        (json_base, template_base) = root
+                        if href:
+                              json_base += "/"+href
+                              template_base += "/"+template_href
+                        attribs["links"][rel] = json_base
+                        attribs["%s_link"%rel] = lambda obj, template_base=template_base: template_base%obj.properties()
 
             # find the primary key from the "self" link
             # or create one with a new column
             (key_name, resource_url) = (None,None)
             try:
-                  (key_name, resource_url) = get_resource_key(schema)
+                  (key_name, resource_url) = utils.get_resource_key(schema)
             except Exception as e:
                   print e
                   key_name = "id"

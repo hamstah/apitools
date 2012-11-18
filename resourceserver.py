@@ -38,6 +38,9 @@ class ResourceServer:
         self.db.session.delete(resource)
         self.db.session.commit()
 
+    def host_str(self):
+        return "http://%s:%d"%(self.host, self.port)
+
     def add_resource(self, schema):
         """Add the resource to the list of resources the server can handle"""
 
@@ -45,36 +48,28 @@ class ResourceServer:
         model = self.model_generator.generate(self.db, schema)
         setattr(self, schema["name"], model)
 
-        for link in schema["links"]:
-            href = link["href"]
-            args = utils.get_url_args(href)
-
-            # transform the link href into a flask route
-            for arg_name in args:
-                arg_schema = schema["properties"][arg_name]
-                flask_type = {"integer":"int",
-                              "number":"float",
-                              "string":"string"
-                              }[arg_schema["type"]]
-                href=href.replace("{%s}"%arg_name, "<%s:%s>"%(flask_type, arg_name))
+        for rel,href in model.links.items():
+            if rel == "root":
+                continue
             
-            fn = None
+            # transform the link href into a flask route
+            href = utils.url_to_flask_route(href, schema)
 
+            fn = None
             # generate routes automatically for some of the links
-            if link["rel"] == "instances":
+            if rel == "instances":
                 # returns all the instances of the model
                 def r_instances(**kwargs):
                     return json.dumps([res.properties() for res in model.query.all()])
                 r_instances.methods = ["GET"]
                 fn = r_instances
 
-            elif link["rel"] == "self":
-                if len(args) != 1:
-                    raise Exception("Self link with multiple arguments not supported")
-
+            elif rel == "self":
                 # returns an instance of the object by key
                 # if used with OPTIONS, returns the json-schema
                 def r_self(**kwargs):
+                    if len(kwargs.keys()) != 1:
+                        raise Exception("Self link with multiple arguments not supported")
                     res = model.query.filter_by(**kwargs).first()
                     if not res:
                         abort(404)
@@ -89,7 +84,7 @@ class ResourceServer:
                 r_self.methods = ["GET", "OPTIONS", "DELETE"]
                 fn = r_self
                 
-            elif link["rel"] == "create":
+            elif rel == "create":
                 # creates a new instance
                 def r_create(**kwargs):
                     try:
@@ -100,8 +95,7 @@ class ResourceServer:
                         self.add(new_obj)
                         return (json.dumps(new_obj.key_dict()),
                                 201,
-                                # TODO cleanup link building
-                                {"link":"<http://%s:%d%s>; rel=\"self\""%(self.host,self.port,new_obj.self_link())}
+                                {"link": "<%s%s>; rel=\"self\""%(self.host_str(),new_obj.self_link())}
                                 )
                     
                     except exc.IntegrityError:
@@ -137,16 +131,20 @@ if __name__ == "__main__":
             },
         "links" : [
             {
+                "rel":"root",
+                "href":"/books"
+                },
+            {
                 "rel":"self",
-                "href":"/books/{isbn}",
+                "href":"{isbn}",
                 },
             {
                 "rel":"instances",
-                "href": "/books"
+                "href": ""
                 },
             {
                 "rel":"create",
-                "href":"/books"
+                "href":""
                 },
             ]
         }
