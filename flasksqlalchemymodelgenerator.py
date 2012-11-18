@@ -3,8 +3,6 @@ from flask.ext.sqlalchemy import SQLAlchemy, orm
 
 from modelgenerator import ModelGenerator, ValidationError, UnknownPropertyError, MissingRequiredPropertyError
 
-from utils import get_resource_key
-
 class FlaskSQLAlchemyModelGenerator(ModelGenerator):
 
     def __init__(self):
@@ -12,48 +10,9 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
 
     def generate(self, db, schema):
 
-        def init(obj, **kwargs):
-            # set the attributes
-            for key, value in kwargs.items():
-                if key not in properties:
-                    raise UnknownPropertyError(schema["name"],key)
-                setattr(obj, key, value)
-
-            # check that all the required args are present
-            for required_prop in [prop_key for prop_key, prop_schema in properties.items()
-                                  if prop_schema.get("required",False)]:
-                if required_prop not in kwargs.keys():
-                    raise MissingRequiredPropertyError(schema["name"], required_prop)
-
+        attribs = ModelGenerator.generate(self, schema)
+        key_name = attribs["key_name"]
         properties = schema.get("properties",{})
-
-        attribs = {
-            "__init__": init,
-            "__repr__" : lambda obj:
-            "<%s %s>"%(obj.__class__.__name__,
-                       ','.join(["%s=%s"%(attr_name, getattr(obj, attr_name))
-                                 for attr_name in properties.keys()])),
-            "properties": lambda obj:
-                dict((k, v) for k,v in obj.__dict__.iteritems() if k in properties.keys()),
-            "key_value" : lambda obj:
-                getattr(obj, obj.key_name),
-            "key_dict": lambda obj:
-                {obj.key_name: obj.key_value()},
-            "self_link" : lambda obj:
-                obj.resource_url and obj.resource_url.replace("{"+obj.key_name+"}", obj.key_value()),
-            "schema": lambda obj:
-                schema
-            }
-
-        # find the primary key from the "self" link
-        # or create one with a new column
-        (key_name, resource_url) = (None,None)
-        try:
-            (key_name, resource_url) = get_resource_key(schema)
-        except Exception as e:
-            key_name = "id"
-            while key_name in properties.keys():
-                key_name = '_' + key_name
 
         if key_name not in properties.keys():
             # create a primary key if not self link was present
@@ -62,16 +21,14 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
 
         # add columns and validators from the schema properties
         for property_name, property_schema in properties.items():
-            column = self.generate_column(db, property_schema, property_name==key_name)
-            attribs[property_name] = column
+            attribs[property_name] = self.generate_column(db, property_schema, 
+                                                          property_name==key_name)
 
             validator = self.generate_validator(property_name, property_schema)
             if validator:
                 attribs[validator.__name__] = orm.validates(property_name)(validator)
 
-        model = type(schema["name"], (db.Model,), attribs)
-        model.key_name = key_name
-        model.resource_url = resource_url
+        model = type(schema["name"],(db.Model,), attribs)
         return model
 
     def generate_column(self, db, schema, primary):
@@ -129,7 +86,6 @@ if __name__ == "__main__":
 
     generator = FlaskSQLAlchemyModelGenerator()
     model = generator.generate(db,schema)
-
 
     test = model(code="12345", in_stock=True, reference=6, price=2.2)
 

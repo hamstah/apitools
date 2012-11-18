@@ -1,5 +1,7 @@
 import re
 
+from utils import get_resource_key
+
 class ValidationError(Exception):
       def __init__(self, type_name, value, message):
             Exception.__init__(self, "%s is an invalid %s value: %s"%(value, type_name, message))
@@ -18,7 +20,57 @@ class ModelGenerator:
             pass
       
       def generate(self, schema):
-            pass
+
+            def init(obj, **kwargs):
+                  # set the attributes
+                  for key, value in kwargs.items():
+                        if key not in properties:
+                              raise UnknownPropertyError(schema["name"],key)
+                        setattr(obj, key, value)
+
+                  # check that all the required args are present
+                  for required_prop in [prop_key for prop_key, prop_schema in properties.items()
+                                        if prop_schema.get("required",False)]:
+                        if required_prop not in kwargs.keys():
+                              raise MissingRequiredPropertyError(schema["name"], required_prop)
+
+            properties = schema.get("properties",{})
+            attribs = {
+                  "__init__": init,
+                  "__repr__" : lambda obj:
+                        "<%s %s>"%(obj.__class__.__name__,
+                                   ','.join(["%s=%s"%(attr_name, getattr(obj, attr_name))
+                                             for attr_name in properties.keys()])),
+                  "properties": lambda obj:
+                        dict((k, v) for k,v in obj.__dict__.iteritems() if k in properties.keys()),
+                  "key_value" : lambda obj:
+                        getattr(obj, obj.key_name),
+                  "key_dict": lambda obj:
+                        {obj.key_name: obj.key_value()},
+                  "self_link" : lambda obj:
+                        obj.resource_url and obj.resource_url.replace("{"+obj.key_name+"}", obj.key_value()),
+                  "schema": lambda obj:
+                        schema
+                  }
+
+            # find the primary key from the "self" link
+            # or create one with a new column
+            (key_name, resource_url) = (None,None)
+            try:
+                  (key_name, resource_url) = get_resource_key(schema)
+            except Exception as e:
+                  print e
+                  key_name = "id"
+                  while key_name in properties.keys():
+                        key_name = '_' + key_name
+
+            attribs.update({
+                        "key_name":key_name,
+                        "resource_url":resource_url
+                        })
+
+            return attribs
+
 
       def generate_validator(self, name, schema):
             attr_name = "%s_tests"%schema["type"]
