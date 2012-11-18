@@ -45,7 +45,7 @@ class ModelGenerator:
             tests = self.numeric_tests(schema)
             
             tests.update({
-                        "divisibleBy" : (lambda value, test_value : value%test_value == 0, "not divisible by %(test_value)s")
+                        "divisibleBy" : (lambda value, div_by : value%div_by == 0, "not divisible by %(test_value)s")
                         })
             return tests
 
@@ -53,18 +53,18 @@ class ModelGenerator:
             message = "%(test_type)s is %(test_value)s"
             
             tests = {
-                  "minimum": (lambda value,test_value: value >= test_value, message),
-                  "maximum": (lambda value,test_value: value <= test_value, message),
-                  "exclusiveMinimum" : (lambda value, test_value: value != schema["minimum"], message),
-                  "exclusiveMaximum" : (lambda value, test_value: value != schema["maximum"], message),              
+                  "minimum": (lambda value,min_value: value >= min_value, message),
+                  "maximum": (lambda value,max_value: value <= max_value, message),
+                  "exclusiveMinimum" : (lambda value, is_exclusive: not is_exclusive or value != schema["minimum"], message),
+                  "exclusiveMaximum" : (lambda value, is_exclusive: not is_exclusive or value != schema["maximum"], message),              
                   }    
             return tests
 
       def string_tests(self, schema):
             tests = {
-                  "minLength": (lambda value, test_value: len(value) >= test_value, "length must be >= %(test_value)s"),
-                  "maxLength": (lambda value, test_value: len(value) <= test_value, "length must be <= %(test_value)s"),                  
-                  "pattern": (lambda value, test_value: re.match(test_value, value), "must match %(test_value)r"),
+                  "minLength": (lambda value, min_len: len(value) >= min_len, "length must be >= %(test_value)s"),
+                  "maxLength": (lambda value, max_len: len(value) <= max_len, "length must be <= %(test_value)s"),                  
+                  "pattern": (lambda value, pattern: re.match(pattern, value), "must match %(test_value)r"),
                   }
             return tests
 
