@@ -16,8 +16,20 @@ Class to generate links defined in the links section of a json-schema.
 
 Class to generate invalid data for a given schema
 
+### modelgenerator
+
+Base class to generate models from a schema
+
+### flasksqlalchemymodelgenerator
+
+Generate SQLAlchemy models to be used with flask-sqlalchemy from a schema
+
 ## Dependencies
 
+### Required
 run init.sh in dependencies
 
+### Needed for flasksqlalchemymodelgenerator only
+
+flask-sqlalchemy is required, use flasksqlalchemy-requirements.txt with virtualenv
 
