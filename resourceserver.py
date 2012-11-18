@@ -1,4 +1,4 @@
-from flask import Flask, request, abort, make_response
+from flask import Flask, request, abort, jsonify
 from sqlalchemy import exc
 from flask.ext.sqlalchemy import SQLAlchemy, orm
 
@@ -61,13 +61,15 @@ class ResourceServer:
             self.app.add_url_rule(href, fn.__name__, fn)
 
         def input_error(error, code=400):
-            return (json.dumps({"error":str(error)}), code)
+            ret = jsonify({"error":str(error)})
+            ret.status_code = code
+            return ret
 
         # generate routes automatically for some of the links
         if "instances" in model.links:
             # returns all the instances of the model
             def r_instances(**kwargs):
-                return json.dumps([res.properties_values() for res in model.query.all()])
+                return jsonify([res.properties_values() for res in model.query.all()])
             add_route(r_instances)
 
         if "self" in model.links:
@@ -81,9 +83,9 @@ class ResourceServer:
                     abort(404)
 
                 if request.method == "GET":
-                    return json.dumps(res.properties_values())
+                    return jsonify(res.properties_values())
                 elif request.method == "OPTIONS":
-                    return json.dumps(res.schema)
+                    return jsonify(res.schema)
                 elif request.method == "DELETE":
                     self.delete(res)
                     return ("",204)
@@ -114,10 +116,10 @@ class ResourceServer:
 
                     # saves the object and return
                     self.add(new_obj)
-                    return (json.dumps(new_obj.key_dict()),
-                            201,
-                            {"Location": "%s%s"%(self.host_str(),new_obj.self_link())}
-                            )
+                    ret = jsonify(new_obj.key_dict())
+                    ret.status_code = 201
+                    ret.headers["Location"] = "%s%s"%(self.host_str(),new_obj.self_link())
+                    return ret
                 except ValidationError as error:
                     return input_error(error)
                 except exc.IntegrityError as error:
