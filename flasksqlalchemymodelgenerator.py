@@ -1,11 +1,9 @@
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy, orm
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
-db = SQLAlchemy(app)
-
 from modelgenerator import ModelGenerator, ValidationError, UnknownPropertyError, MissingRequiredPropertyError
+
+from utils import get_resource_key
 
 class FlaskSQLAlchemyModelGenerator(ModelGenerator):
 
@@ -27,32 +25,53 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
                 if required_prop not in kwargs.keys():
                     raise MissingRequiredPropertyError(schema["name"], required_prop)
 
+        properties = schema.get("properties",{})
 
         attribs = {
-            # default columns for all models
-            "id" : db.Column(db.Integer, primary_key=True),
-
-            # utils
             "__init__": init,
             "__repr__" : lambda obj:
             "<%s %s>"%(obj.__class__.__name__,
                        ','.join(["%s=%s"%(attr_name, getattr(obj, attr_name))
-                                 for attr_name in properties.keys()]))
+                                 for attr_name in properties.keys()])),
+            "properties": lambda obj:
+                dict((k, v) for k,v in obj.__dict__.iteritems() if k in properties.keys()),
+            "key" : lambda obj:
+                getattr(obj, obj.key_name),
+            "key_dict": lambda obj:
+                {obj.key_name: obj.key()},
+            "self_link" : lambda obj:
+                obj.resource_url and obj.resource_url.replace("{"+obj.key_name+"}", obj.key()),
+            "schema": lambda obj:
+                schema
             }
 
-        properties = schema.get("properties",{})
+        # find the primary key from the "self" link
+        # or create one with a new column
+        (key_name, resource_url) = (None,None)
+        try:
+            (key_name, resource_url) = get_resource_key(schema)
+        except Exception as e:
+            key_name = "id"
+            while key_name in properties.keys():
+                key_name = "_" + key_name
+
+            attribs[key_name] = db.Column(db.Integer, primary_key=True)
+
         # add columns and validators from the schema properties
         for property_name, property_schema in properties.items():
-            column = self.generate_column(db, property_name, property_schema)
+            column = self.generate_column(db, property_name, property_schema, property_name==key_name)
             attribs[property_name] = column
 
             validator = self.generate_validator(property_name, property_schema)
             if validator:
                 attribs[validator.__name__] = orm.validates(property_name)(validator)
 
-        return type(schema["name"], (db.Model,), attribs)
+        model = type(schema["name"], (db.Model,), attribs)
+        model.key_name = key_name
+        model.resource_url = resource_url
+        return model
 
-    def generate_column(self, db, name, schema):
+    def generate_column(self, db, name, schema, primary):
         # convert from json-schema type to SQLAlchemy type
         sqla_type = {"integer":db.Integer,
                      "number":db.Float,
@@ -62,11 +81,14 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
 
         # create the column
         required = schema.get("required", False)
-        return db.Column(sqla_type, nullable=not required)
+        return db.Column(sqla_type, nullable=not required,primary_key=primary)
 
 
 if __name__ == "__main__":
 
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+    db = SQLAlchemy(app)
 
     schema = {
         "name":"search_result",

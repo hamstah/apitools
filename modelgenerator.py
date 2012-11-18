@@ -59,9 +59,7 @@ class ModelGenerator:
 
       def number_tests(self, schema):
             tests = self.numeric_tests(schema)
-            tests.update({
-                        "__isNumber" : (lambda value: isinstance(value, (int, long, float)), "'%(value)s' is not a number"),
-                        })
+            tests["__isNumber"] = (lambda value: isinstance(value, (int, long, float)), "'%(value)s' is not a number")
             return tests
 
       def integer_tests(self, schema):
