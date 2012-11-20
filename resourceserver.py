@@ -61,7 +61,7 @@ class ResourceServer:
             self.app.add_url_rule(href, fn.__name__, fn)
 
         def input_error(error, code=400):
-            ret = jsonify({"error":str(error)})
+            ret = jsonify({"error":unicode(error)})
             ret.status_code = code
             return ret
 
@@ -117,7 +117,14 @@ class ResourceServer:
             def r_create(**kwargs):
                 try:
                     # this is ok as the model checks the input in __init__
-                    new_obj = model(**dict(request.form.items()))
+
+                    if len(request.form.items()):
+                        attribs = dict(request.form.items())
+                    elif len(request.data):
+                        attribs = json.loads(request.data)
+                    else:
+                        return input_error("empty body")
+                    new_obj = model(**attribs)
 
                     # saves the object and return
                     self.add(new_obj)
@@ -125,6 +132,9 @@ class ResourceServer:
                     ret.status_code = 201
                     ret.headers["Location"] = "%s%s"%(self.host_str(),new_obj.self_link())
                     return ret
+                except ValueError as error:
+                    # invalid json
+                    return input_error("Invalid data: %s"%error)
                 except ValidationError as error:
                     return input_error(error)
                 except exc.IntegrityError as error:
