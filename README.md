@@ -26,7 +26,179 @@ Generate SQLAlchemy models to be used with flask-sqlalchemy from a schema
 
 ## backbonemodelgenerator
 
-Generate models and collections for Backbone.js
+Generate models and collections for Backbone.js from a schema.
+The models generated use the primary key defined in the `rel=self` link or `id` by default.
+To be able to use collections, make sure your schema has a `rel=instances` link or `fetch` wont' work.
+
+### Usage
+
+```
+$ python backbonemodelgenerator.py -h
+Usage: backbonemodelgenerator.py jsonfile1 [jsonfile2]...
+
+Options:
+  -h, --help            show this help message and exit
+  -t OUTPUT_TYPE, --type=OUTPUT_TYPE
+                        Output type (js|wrapped|html)
+```
+
+### Output types
+
+#### js
+
+Outputs only the js code for the models/collections
+
+```
+$ python backbonemodelgenerator.py -t js data/schemas/message.json
+
+App.Models.Message = Backbone.Model.extend({
+    urlRoot: '/messages',
+    idAttribute: 'id'
+});
+
+App.Collections.Messages = Backbone.Collection.extend({
+    model : App.Models.Message,
+    url : "/messages"
+});
+```
+
+#### wrapped
+
+Wraps the js code into `$(document).ready()`
+
+```
+$ python backbonemodelgenerator.py -t wrapped data/schemas/message.json
+
+$(document).ready(function() {
+
+    window.App = { Models : {}, Collections : {} };
+    
+    App.Models.Message = Backbone.Model.extend({
+        urlRoot: '/messages',
+        idAttribute: 'id'
+    });
+    
+    App.Collections.Messages = Backbone.Collection.extend({
+        model : App.Models.Message,
+        url : "/messages"
+    });
+
+});
+```
+
+#### html
+
+Same as wrapped but generate a whole html page including jQuery, Backbone and Underscore to easily test.
+
+### Example usage
+
+#### Setup
+
+You can use it with resource server for example
+```
+$ mkdir static
+$ python backbonemodelgenerator.py -t html data/schemas/message.json > static/index.html
+$ python resourceserver.py data/schemas/message.json
+Added message
+ * Running on http://0.0.0.0:5000/
+```
+
+Now open your browser at http://0.0.0.0:5000/static/index.html
+Open your js console to start playing
+
+#### Create a collection and fetch them
+
+```
+var col = new App.Collections.Messages()
+col.fetch()
+```
+You should see backbone talking to the resource server in the server shell
+```
+127.0.0.1 - - [20/Nov/2012 01:17:15] "GET /messages HTTP/1.1" 200 -
+```
+
+You can inspect the results using
+```
+col.models
+```
+
+Using fetch() only works if your schema includes a link with `rel=instances`
+
+#### Create a new message
+
+```
+var msg = new App.Models.Message({recipient:"01234567890", text:"test message"})
+msg.attributes
+```
+
+At that point the message is not saved yet, you can verify by using
+```
+msg.isNew()
+```
+
+You can save it on the server using 
+```
+msg.save()
+```
+
+You can verify that the message was sent to the server in the server shell
+```
+127.0.0.1 - - [20/Nov/2012 01:23:24] "POST /messages HTTP/1.1" 201 -
+```
+
+Now you should have an id for the message and it shouldn't be marked as new anymore.
+```
+msg.id
+msg.isNew()
+```
+
+#### Fetch an existing message
+
+Create a message with the `id` of the message to fetch
+```
+var msg = new App.Models.Message({id: 3})
+```
+
+The message is not marked as new as it has an id.
+We can then fetch the actual message from the server using
+```
+msg.fetch()
+msg.attributes()
+```
+
+You can see the query in the server shell again
+```
+127.0.0.1 - - [20/Nov/2012 01:25:41] "PUT /messages/3 HTTP/1.1" 200 -
+```
+
+#### Update a message
+
+Once you have a message object, you can update it using `save`.
+
+```
+> msg.attributes.recipient
+"01234567890"
+> msg.save({recipient:"00123456789"})
+> msg.attributes.recipient
+"00123456789"
+```
+
+This is done by doing a `PUT` on the server
+```
+127.0.0.1 - - [20/Nov/2012 01:33:35] "PUT /messages/3 HTTP/1.1" 200 -
+```
+
+#### Delete a message
+
+Simply use `destroy` on the object
+```
+msg.destroy()
+```
+
+And see the `DELETE` happening on the server
+```
+127.0.0.1 - - [20/Nov/2012 01:34:48] "DELETE /messages/3 HTTP/1.1" 204 -
+```
 
 ## resourceserver
 
@@ -52,6 +224,8 @@ Added message
 
 ```
 $ curl -i -X POST    http://0.0.0.0:5000/messages -d "recipient=07771818335&text=nice message"
+$ curl -i -X POST    http://0.0.0.0:5000/messages -d '{"recipient":"0123456780", "text":"test message"}' \
+	   -H "Content-Type: application/json"
 HTTP/1.0 201 CREATED
 Content-Type: application/json
 Content-Length: 13
@@ -234,6 +408,21 @@ Date: Sun, 18 Nov 2012 20:06:00 GMT
 
 {
   "error": "text is required in message"
+}
+```
+
+#### Trying to create a message in json with invalid data
+
+```
+$ curl -i -X POST    http://0.0.0.0:5000/messages  -d '{"recipient":"01234567890", "text":"test message}' -H "Content-Type: application/json"
+HTTP/1.0 400 BAD REQUEST
+Content-Type: application/json
+Content-Length: 90
+Server: Werkzeug/0.8.3 Python/2.7.3
+Date: Tue, 20 Nov 2012 00:23:05 GMT
+
+{
+  "error": "Invalid data: Unterminated string starting at: line 1 column 35 (char 35)"
 }
 ```
 
