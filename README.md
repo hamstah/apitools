@@ -4,31 +4,41 @@ Utilities to make defining apis easier
 
 ## datagenerator 
 
-Class to generate random values given a json-schema.
-Doesn't support all json-schema monstruousities, only a subset I find useful.
-See TODO.md for what is likely to be implemented next.
+Class to generate random values given a json-schema.  
+Doesn't support all json-schema monstruousities, only a subset I find useful.  
+See TODO.md for what is likely to be implemented next.  
+
+---
 
 ## urlsgenerator
 
 Class to generate links defined in the links section of a json-schema.
 
+---
+
 ## invaliddatagenerator
 
 Class to generate invalid data for a given schema
+
+---
 
 ## modelgenerator
 
 Base class to generate models from a schema
 
+---
+
 ## flasksqlalchemymodelgenerator
 
 Generate SQLAlchemy models to be used with flask-sqlalchemy from a schema
 
+---
+
 ## backbonemodelgenerator
 
-Generate models and collections for Backbone.js from a schema.
-The models generated use the primary key defined in the `rel=self` link or `id` by default.
-To be able to use collections, make sure your schema has a `rel=instances` link or `fetch` wont' work.
+Generate models and collections for Backbone.js from a schema.  
+The models generated use the primary key defined in the `rel=self` link or `id` by default.  
+To be able to use collections, make sure your schema has a `rel=instances` link or `fetch` won't work.  
 
 ### Usage
 
@@ -159,8 +169,8 @@ Create a message with the `id` of the message to fetch
 var msg = new App.Models.Message({id: 3})
 ```
 
-The message is not marked as new as it has an id.
-We can then fetch the actual message from the server using
+The message is not marked as new as it has an id.  
+We can then fetch the actual message from the server using  
 ```
 msg.fetch()
 msg.attributes()
@@ -200,10 +210,12 @@ And see the `DELETE` happening on the server
 127.0.0.1 - - [20/Nov/2012 01:34:48] "DELETE /messages/3 HTTP/1.1" 204 -
 ```
 
+---
+
 ## resourceserver
 
-Class to implement the REST api of resources defined in a schema.
-Supports creation, update, retrieval, deletion, listing of instances and schema
+Class to implement the REST api of resources defined in a schema.  
+Supports creation, update, retrieval, deletion, listing of instances and schema.  
 
 ### Usage
 
@@ -348,9 +360,9 @@ Date: Sun, 18 Nov 2012 19:38:38 GMT
 
 #### Trying to set an implicit key
 
-The message.json doesn't define an explicit primary key, but defines `id` as the key in the `rel=self` link.
-Each message then gets an additional `id` key managed by the server.
-Trying to set or update the `id` results in errors
+The message.json doesn't define an explicit primary key, but defines `id` as the key in the `rel=self` link.  
+Each message then gets an additional `id` key managed by the server.  
+Trying to set or update the `id` results in errors  
 
 ```
 $ curl -i -X POST    http://0.0.0.0:5000/messages   -d "recipient=07771818335&text=nice message&id=7"
@@ -429,6 +441,7 @@ Date: Tue, 20 Nov 2012 00:23:05 GMT
 # Dependencies
 
 ## Required
+
 run init.sh in dependencies
 
 ## Optional
