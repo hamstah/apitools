@@ -14,7 +14,7 @@ See TODO.md for what is likely to be implemented next.
 
 ## Examples
 
-```
+```python
 from datagenerator import DataGenerator
 
 generator = DataGenerator()
@@ -24,7 +24,7 @@ generator = DataGenerator()
 
 Generate random values of each basic type using
 
-```
+```python
 >>> generator.random_value("string")
 'Olzq3LV'
 >>> generator.random_value("number")
@@ -40,7 +40,7 @@ True
 
 `number`
 
-```
+```python
 >>> generator.random_value({"type":"number", "minimum":30})
 32.34295327292445
 >>> generator.random_value({"type":"number", "maximum":30})
@@ -50,7 +50,7 @@ True
 ```
 
 `integer` supports `minimum` and `maximum` like `number` and more
-```
+```python
 >>> generator.random_value({"type":"integer", "maximum":30, "divisibleBy":4, "minimum":12})
 24
 >>> generator.random_value({"type":"integer", "maximum":30, "exclusiveMaximum":True, "minimum":28})
@@ -58,8 +58,8 @@ True
 ```
 (same for `exclusiveMinimum`)
 
-`string` supports `minLength`, `maxLength`, `pattern` (ignores `minLength` and `maxLength` if pattern is used)
-```
+`string` supports `minLength`, `maxLength`, `pattern` (ignores `minLength` and `maxLength` if `pattern` is used)
+```python
 >>> generator.random_value({"type":"string", "maxLength":20, "minLength":15})
 'VytPCEdAImX11188HU'
 >>> generator.random_value({"type":"string", "pattern":"[0-9]{3}[a-zA-Z]{2,5}"})
@@ -72,9 +72,15 @@ u'806FoNP'
 
 Without constraints the array size will be picked the same way as a random `integer`.  
 Each item in the array is generated using the default generator for the type given in `items`.
-```
+```python
 >>> generator.random_value({"type":"array", "items": {"type":"string"}})
-['39yxcpvS5tfPf6O', 'sNDk7SlGNQstxxx', 'nPcRSD9yIP7j ', 'PWP7KQfjc1', 'tt6F6Z2YEp', 'SpK g6wQB', 'NjJCotFojP1s6', 'JHHw8J OS9E', 'GMC017LVEJ', 'WaaqBVd6']
+[
+	'39yxcpvS5tfPf6O', 
+	'sNDk7SlGNQstxxx', 
+	'nPcRSD9yIP7j ', 
+	'PWP7KQfjc1', 
+	'tt6F6Z2YEp'
+]
 ```
 
 `minItems`, `maxItems` and `uniqueItems` are supported
@@ -82,7 +88,7 @@ Each item in the array is generated using the default generator for the type giv
 The type of object in `items` can be anything that the generator knows about, either one of the basic types
 or a user defined one available from the generator's schemas store. 
 
-```
+```python
 from schemasstore import SchemasStore
 
 ...
@@ -102,14 +108,14 @@ See [datagenerator](https://github.com/hamstah/apitools/blob/master/datagenerato
 Objects can be generated the same way as the other types.
 
 Example generating [search_result.json](https://github.com/hamstah/apitools/blob/master/data/schemas/search_result.json)
-```
+```python
 >>> store.load_folder("data/schemas/")
 >>> print generator.random_value("search_result")
 {u'price': 21.980325774975253, u'name': 'wdvfXYrrt', u'reference': 26}
 ```
 
 Generating arrays of objects is fine as well
-```
+```python
 >>> generator.random_value({"type":"array", "maxItems":3, "minItems":2, "items":{"type":"search_result"}})
 [
     {u'price': 20.304440535786522, u'name': 'VUIgjaPbs', u'reference': 40}, 
@@ -120,7 +126,7 @@ Generating arrays of objects is fine as well
 Or generating objects with arrays of other objects in them, see
 [search_resuts](https://github.com/hamstah/apitools/blob/master/data/schemas/search_results.json) 
 with an array of [search_result](https://github.com/hamstah/apitools/blob/master/data/schemas/search_result.json)
-```
+```python
 >>> print generator.random_value("search_results")
 {
     u'total_results': 41, 
@@ -139,7 +145,7 @@ with an array of [search_result](https://github.com/hamstah/apitools/blob/master
 ### Schemas
 
 Why not generate random schemas?
-```
+```python
 >>> r_schema = generator.random_schema()
 >>> r_schema
 {
@@ -155,7 +161,7 @@ Why not generate random schemas?
 }
 ```
 And then generate an array of random values of it
-```
+```python
 >>> store.add_schema(r_schema)
 True
 >>> generator.random_value({"type":"array", "minItems":1, "maxItems":3, "items":{"type":"zJllGkKosmocOVO"}})
@@ -187,7 +193,7 @@ Class to generate links defined in the links section of a json-schema.
 Generate links from [book.json](https://github.com/hamstah/apitools/blob/master/data/schemas/book.json)
 
 Input
-```
+```javascript
 ...
 	"isbn" : {
 	    "type":"string",
@@ -211,7 +217,7 @@ Input
 ```
 
 Output
-```
+```python
 {
     u'instances': [u'books'], 
     u'self'     : [u'books/525259838909X']
@@ -266,7 +272,7 @@ Options:
 
 Outputs only the js code for the models/collections
 
-```
+```javascript
 $ python backbonemodelgenerator.py -t js data/schemas/message.json
 
 App.Models.Message = Backbone.Model.extend({
@@ -284,7 +290,7 @@ App.Collections.Messages = Backbone.Collection.extend({
 
 Wraps the js code into `$(document).ready()`
 
-```
+```javascript
 $ python backbonemodelgenerator.py -t wrapped data/schemas/message.json
 
 $(document).ready(function() {
@@ -313,7 +319,7 @@ Same as wrapped but generate a whole html page including jQuery, Backbone and Un
 ### Setup
 
 You can use it with resource server for example
-```
+```bash
 $ mkdir static
 $ python backbonemodelgenerator.py -t html data/schemas/message.json > static/index.html
 $ python resourceserver.py data/schemas/message.json
@@ -326,17 +332,17 @@ Open your js console to start playing
 
 ### Create a collection and fetch them
 
-```
+```javascript
 var col = new App.Collections.Messages()
 col.fetch()
 ```
 You should see backbone talking to the resource server in the server shell
-```
+```bash
 127.0.0.1 - - [20/Nov/2012 01:17:15] "GET /messages HTTP/1.1" 200 -
 ```
 
 You can inspect the results using
-```
+```javascript
 col.models
 ```
 
@@ -344,28 +350,28 @@ Using fetch() only works if your schema includes a link with `rel=instances`
 
 ### Create a new message
 
-```
+```javascript
 var msg = new App.Models.Message({recipient:"01234567890", text:"test message"})
 msg.attributes
 ```
 
 At that point the message is not saved yet, you can verify by using
-```
+```javascript
 msg.isNew()
 ```
 
 You can save it on the server using 
-```
+```javascript
 msg.save()
 ```
 
 You can verify that the message was sent to the server in the server shell
-```
+```bash
 127.0.0.1 - - [20/Nov/2012 01:23:24] "POST /messages HTTP/1.1" 201 -
 ```
 
 Now you should have an id for the message and it shouldn't be marked as new anymore.
-```
+```javascript
 msg.id
 msg.isNew()
 ```
@@ -373,19 +379,19 @@ msg.isNew()
 ### Fetch an existing message
 
 Create a message with the `id` of the message to fetch
-```
+```javascript
 var msg = new App.Models.Message({id: 3})
 ```
 
 The message is not marked as new as it has an id.  
 We can then fetch the actual message from the server using  
-```
+```javascript
 msg.fetch()
 msg.attributes()
 ```
 
 You can see the query in the server shell again
-```
+```bash
 127.0.0.1 - - [20/Nov/2012 01:25:41] "PUT /messages/3 HTTP/1.1" 200 -
 ```
 
@@ -393,7 +399,7 @@ You can see the query in the server shell again
 
 Once you have a message object, you can update it using `save`.
 
-```
+```javascript
 > msg.attributes.recipient
 "01234567890"
 > msg.save({recipient:"00123456789"})
@@ -402,19 +408,19 @@ Once you have a message object, you can update it using `save`.
 ```
 
 This is done by doing a `PUT` on the server
-```
+```bash
 127.0.0.1 - - [20/Nov/2012 01:33:35] "PUT /messages/3 HTTP/1.1" 200 -
 ```
 
 ### Delete a message
 
 Simply use `destroy` on the object
-```
+```javascript
 msg.destroy()
 ```
 
 And see the `DELETE` happening on the server
-```
+```bash
 127.0.0.1 - - [20/Nov/2012 01:34:48] "DELETE /messages/3 HTTP/1.1" 204 -
 ```
 
@@ -428,13 +434,13 @@ Supports creation, update, retrieval, deletion, listing of instances and schema.
 ## Usage
 
 Run the server using
-```
+```bash
 $ python resourceserver.py [jsonfile1, jsonfile2, ...]
 ```
 
 ## Example using data/schemas/message.json
 
-```
+```bash
 $ python resourceserver.py data/schemas/message.json
 Added message
  * Running on http://0.0.0.0:5000/
@@ -442,7 +448,7 @@ Added message
 
 ### Create a new message
 
-```
+```bash
 $ curl -i -X POST    http://0.0.0.0:5000/messages -d "recipient=07771818335&text=nice message"
 $ curl -i -X POST    http://0.0.0.0:5000/messages -d '{"recipient":"0123456780", "text":"test message"}' \
 	   -H "Content-Type: application/json"
@@ -460,7 +466,7 @@ Date: Sun, 18 Nov 2012 19:28:56 GMT
 
 ### List messages
 
-```
+```bash
 $ curl -i -X GET     http://0.0.0.0:5000/messages
 HTTP/1.0 200 OK
 Content-Type: application/json
@@ -476,7 +482,7 @@ Date: Sun, 18 Nov 2012 19:32:09 GMT
 
 ### Retrieve a message
 
-```
+```bash
 $ curl -i -X GET     http://0.0.0.0:5000/messages/2
 HTTP/1.0 200 OK
 Content-Type: application/json
@@ -493,7 +499,7 @@ Date: Sun, 18 Nov 2012 19:35:42 GMT
 
 ### Get the json-schema of a message
 
-```
+```bash
 $ curl -i -X OPTIONS http://0.0.0.0:5000/messages/2
 HTTP/1.0 200 OK
 Content-Type: application/json
@@ -544,7 +550,7 @@ Date: Sun, 18 Nov 2012 19:37:06 GMT
 
 Supports partial updates
 
-```
+```bash
 $ curl -i -X PUT     http://0.0.0.0:5000/messages/2 -d 'recipient=07771818336'
 HTTP/1.0 200 OK
 Content-Type: text/html; charset=utf-8
@@ -555,7 +561,7 @@ Date: Sun, 18 Nov 2012 19:38:02 GMT
 
 ### Delete a message
 
-```
+```bash
 $ curl -i -X DELETE  http://0.0.0.0:5000/messages/2
 HTTP/1.0 204 NO CONTENT
 Content-Type: text/html; charset=utf-8
@@ -572,7 +578,7 @@ The message.json doesn't define an explicit primary key, but defines `id` as the
 Each message then gets an additional `id` key managed by the server.  
 Trying to set or update the `id` results in errors  
 
-```
+```bash
 $ curl -i -X POST    http://0.0.0.0:5000/messages   -d "recipient=07771818335&text=nice message&id=7"
 $ curl -i -X PUT     http://0.0.0.0:5000/messages/1 -d "recipient=07771818335&text=nice message&id=3"
 HTTP/1.0 400 BAD REQUEST
@@ -587,7 +593,7 @@ Date: Sun, 18 Nov 2012 19:43:48 GMT
 ```
 ### Trying to create or update unknown properties
 
-```
+```bash
 $ curl -i -X POST    http://0.0.0.0:5000/messages   -d "recipient=07771818335&tet=nice message&haxxy=foo"
 $ curl -i -X PUT     http://0.0.0.0:5000/messages/1 -d "haxxy=foo"
 HTTP/1.0 400 BAD REQUEST
@@ -603,7 +609,7 @@ Date: Sun, 18 Nov 2012 19:56:19 GMT
 
 ### Trying to create or update properties with values not respecting constraints
 
-```
+```bash
 $ curl -i -X PUT     http://0.0.0.0:5000/messages/1 -d "recipient=0notanumber&text=nice message"
 $ curl -i -X POST    http://0.0.0.0:5000/messages   -d "recipient=0notanumber"
 HTTP/1.0 400 BAD REQUEST
@@ -619,7 +625,7 @@ Date: Sun, 18 Nov 2012 20:03:34 GMT
 
 ### Trying to create a message without all the required properties
 
-```
+```bash
 $ curl -i -X POST    http://0.0.0.0:5000/messages -d "recipient=012345678901"HTTP/1.0 400 BAD REQUEST
 Content-Type: application/json
 Content-Length: 44
@@ -633,7 +639,7 @@ Date: Sun, 18 Nov 2012 20:06:00 GMT
 
 ### Trying to create a message in json with invalid data
 
-```
+```bash
 $ curl -i -X POST    http://0.0.0.0:5000/messages  -d '{"recipient":"01234567890", "text":"test message}' -H "Content-Type: application/json"
 HTTP/1.0 400 BAD REQUEST
 Content-Type: application/json
@@ -666,7 +672,7 @@ If there is a `rel=self` link and it contains a `{variable}` part, the variable 
 This schema uses `isbn` as the explicit key. Instances can be created using a specific `isbn`, and its value
 can be updated.
 
-```
+```javascript
 ...
 	"isbn" : {
 	    "type":"string",
@@ -686,7 +692,7 @@ can be updated.
 ### Example of implicit key
 
 This schema defines an *implicit* key `order_id` (assuming no property is called `order_id`).
-```
+```javascript
 ...
     "links" : [
         {
