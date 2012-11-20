@@ -19,7 +19,7 @@
 	"isbn" : {
 	    "type":"string",
 	    "required":true,
-	    "pattern":"^\\d{12}[\\d|X]$"
+	    "pattern":"^\\d{12}(\\d|X)$"
 	}
 
     },

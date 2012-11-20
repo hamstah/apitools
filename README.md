@@ -1,4 +1,10 @@
-Utilities to make defining apis easier
+Tools to play with json-schemas defined APIs.
+
+These tools are based on json-schema draft 3 from http://tools.ietf.org/html/draft-zyp-json-schema-03
+Not all features of the schema are supported and probably won't be.
+Handling of not supported feature varies between the different tools.
+
+All these tools are proofs of concept and work in progress, they need more extensive testing and documentation.
 
 # datagenerator 
 
@@ -6,11 +12,213 @@ Class to generate random values given a json-schema.
 Doesn't support all json-schema monstruousities, only a subset I find useful.  
 See TODO.md for what is likely to be implemented next.  
 
+## Examples
+
+```
+from datagenerator import DataGenerator
+
+generator = DataGenerator()
+```
+
+### Basic
+
+Generate random values of each basic type using
+
+```
+>>> generator.random_value("string")
+'Olzq3LV'
+>>> generator.random_value("number")
+-6.675904074356879
+>>> generator.random_value("integer")
+30
+>>> generator.random_value("boolean")
+True
+
+```
+
+### Basic with constraints
+
+`number`
+
+```
+>>> generator.random_value({"type":"number", "minimum":30})
+32.34295327292445
+>>> generator.random_value({"type":"number", "maximum":30})
+-35.80704939879546
+>>> generator.random_value({"type":"number", "maximum":30, "minimum":12})
+16.45747265846327
+```
+
+`integer` supports `minimum` and `maximum` like `number` and more
+```
+>>> generator.random_value({"type":"integer", "maximum":30, "divisibleBy":4, "minimum":12})
+24
+>>> generator.random_value({"type":"integer", "maximum":30, "exclusiveMaximum":True, "minimum":28})
+29
+```
+(same for `exclusiveMinimum`)
+
+`string` supports `minLength`, `maxLength`, `pattern` (ignores `minLength` and `maxLength` if pattern is used)
+```
+>>> generator.random_value({"type":"string", "maxLength":20, "minLength":15})
+'VytPCEdAImX11188HU'
+>>> generator.random_value({"type":"string", "pattern":"[0-9]{3}[a-zA-Z]{2,5}"})
+u'806FoNP'
+```
+
+`boolean` doesn't have any constraints.
+
+### Arrays
+
+Without constraints the array size will be picked the same way as a random `integer`.  
+Each item in the array is generated using the default generator for the type given in `items`.
+```
+>>> generator.random_value({"type":"array", "items": {"type":"string"}})
+['39yxcpvS5tfPf6O', 'sNDk7SlGNQstxxx', 'nPcRSD9yIP7j ', 'PWP7KQfjc1', 'tt6F6Z2YEp', 'SpK g6wQB', 'NjJCotFojP1s6', 'JHHw8J OS9E', 'GMC017LVEJ', 'WaaqBVd6']
+```
+
+`minItems`, `maxItems` and `uniqueItems` are supported
+
+The type of object in `items` can be anything that the generator knows about, either one of the basic types
+or a user defined one available from the generator's schemas store. 
+
+```
+from schemasstore import SchemasStore
+
+...
+>>> from schemasstore import SchemasStore
+>>> store = SchemasStore()
+>>> generator.schemas_store = store
+>>> store.add_schema({"type":"integer", "name":"small_integer", "minimum":0,"maximum":9})
+True
+>>> generator.random_value({"type":"array", "uniqueItems":True, "minItems":10, "items":{"type":"small_integer"}})
+[0, 7, 2, 5, 3, 6, 1, 4, 8, 9]
+```
+
+See [datagenerator](https://github.com/hamstah/apitools/blob/master/datagenerator.py) for other examples.
+
+### Objects
+
+Objects can be generated the same way as the other types.
+
+Example generating [search_result.json](https://github.com/hamstah/apitools/blob/master/data/schemas/search_result.json)
+```
+>>> store.load_folder("data/schemas/")
+>>> print generator.random_value("search_result")
+{u'price': 21.980325774975253, u'name': 'wdvfXYrrt', u'reference': 26}
+```
+
+Generating arrays of objects is fine as well
+```
+>>> generator.random_value({"type":"array", "maxItems":3, "minItems":2, "items":{"type":"search_result"}})
+[
+    {u'price': 20.304440535786522, u'name': 'VUIgjaPbs', u'reference': 40}, 
+	{u'price': 28.45387747055259, u'name': 'JTycBU1V78X1S', u'reference': 27}
+]
+```
+
+Or generating objects with arrays of other objects in them, see
+[search_resuts](https://github.com/hamstah/apitools/blob/master/data/schemas/search_results.json) 
+with an array of [search_result](https://github.com/hamstah/apitools/blob/master/data/schemas/search_result.json)
+```
+>>> print generator.random_value("search_results")
+{
+    u'total_results': 41, 
+	u'total_pages': 26, 
+	u'current_page': 33, 
+	u'items_per_page': 27, 
+	u'results': [
+	    {u'price': 26.218704680177446, u'name': 'B4p1Z1pOFQO', u'reference': 38}, 
+		{u'price': 21.205089550441276, u'name': 'FQPHdLds', u'reference': 7}, 
+		{u'price': 20.610536930894398, u'name': '8D862p1XVupP', u'reference': 38}, 
+		{u'price': 9.543934434058526, u'name': 'PmqBA0e DIWisf', u'reference': 32}
+	]
+}
+```
+
+### Schemas
+
+Why not generate random schemas?
+```
+>>> r_schema = generator.random_schema()
+>>> r_schema
+{
+    'type': 'object', 
+	'properties': {
+	    u'viYXjhu': {'required': False, 'type': 'boolean'}, 
+		u'TO': {'required': False, 'type': 'string'}, 
+		u'NTSd': {'required': False, 'type': 'string'}, 
+		u'WjaL': {'required': False, 'type': 'string'}, 
+		u'PtvhZ': {'required': False, 'type': 'boolean'}
+	}, 
+	'name': u'zJllGkKosmocOVO'
+}
+```
+And then generate an array of random values of it
+```
+>>> store.add_schema(r_schema)
+True
+>>> generator.random_value({"type":"array", "minItems":1, "maxItems":3, "items":{"type":"zJllGkKosmocOVO"}})
+[
+	{u'TO': 'jamKFpdwY'}, 
+	{u'WjaL': '8LnibWUdsSI', u'PtvhZ': True}, 
+	{}
+]
+```
+
+## Notes on the generation
+
+All the values are generated using the `random` module, so please don't use the generate values for anything
+requiring reliable randomness == *don't use it to generate passwords*.
+
+To generate the data, the generator has to limit the range of possible values, so the values generated don't
+vary too wildly. The ranges are controlled by variables in `DataGenerator`. Feel free to tweak them, especially
+if you need values that don't fall into those ranges without having to set both minimum and maximum on your 
+properties.
+
 ---
 
 # urlsgenerator
 
 Class to generate links defined in the links section of a json-schema.
+
+## Example
+
+Generate links from [book.json](https://github.com/hamstah/apitools/blob/master/data/schemas/book.json)
+
+Input
+```
+...
+	"isbn" : {
+	    "type":"string",
+	    "required":true,
+	    "pattern":"^\\d{12}(\\d|X)$"
+	}
+
+    },
+    "links" : [
+	{
+	    "rel":"self",
+	    "href":"books/{isbn}"
+	},
+	{
+	    "rel":"instances",
+	    "href": "books"
+	}
+    ]
+...
+
+```
+
+Output
+```
+{
+    u'instances': [u'books'], 
+    u'self'     : [u'books/525259838909X']
+}
+```
+
+`{isbn}` got replaced by a random value `525259838909X` satisfying the constraints on `isbn` (matches the regex).
 
 ---
 
@@ -18,17 +226,19 @@ Class to generate links defined in the links section of a json-schema.
 
 Class to generate invalid data for a given schema
 
+Basically does the opposite of datagenerator. WIP, needs documentation and examples.
 ---
 
 # modelgenerator
 
-Base class to generate models from a schema
+Base class to generate models from a schema, nothing too visible on its own, check `resourceserver`.
 
 ---
 
 # flasksqlalchemymodelgenerator
 
-Generate SQLAlchemy models to be used with flask-sqlalchemy from a schema
+Generate SQLAlchemy models to be used with flask-sqlalchemy from a schema. Uses `modelgenerator`. 
+Used in `resourceserver` to store and query items.
 
 ---
 
@@ -436,15 +646,64 @@ Date: Tue, 20 Nov 2012 00:23:05 GMT
 }
 ```
 
+## Primary keys
+
+Each model needs a primary key.
+There are 3 ways to define the primary key of the model:
+
+If there is no `rel=self` link, an additional `id` (or appended with as many `_` as 
+necessary to make the name unique) attribute is created. This type of key is called *implicit* and can
+only be set by the server (read only).
+
+
+If there is a `rel=self` link and it contains a `{variable}` part, the variable name is used as the primary key.
+* If `variable` is the name of an existing property, this property is used as the primary key, and can be updated
+(*explicit key*)
+* Otherwise an *implicit* key is created using the `variable` name (stil read-only).
+
+### Example of an explicit key
+
+This schema uses `isbn` as the explicit key. Instances can be created using a specific `isbn`, and its value
+can be updated.
+
+```
+...
+	"isbn" : {
+	    "type":"string",
+	    "required":true,
+	    "pattern":"^\\d{12}[\\d|X]$"
+	}
+
+    },
+    "links" : [
+	{
+	    "rel":"self",
+	    "href":"books/{isbn}"
+	},
+...
 ---
+
+### Example of implicit key
+
+This schema defines an *implicit* key `order_id` (assuming no property is called `order_id`).
+```
+...
+    "links" : [
+        {
+            "rel":"self",
+            "href":"{order_id}"
+        },
+...
+```
 
 # Dependencies
 
-## Required
-
-run init.sh in dependencies
-
 ## Optional
+
+### datagenerator, invaliddatagenerator and urlgenerator
+
+Use `rstr` hosted in a mercurial repo on bitbucket. Run `init.sh` in dependencies to fetch it.
+If you don't have mercurial, `apt-get install mercurial` should help.
 
 ### flasksqlalchemymodelgenerator and resourceserver
 
