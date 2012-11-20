@@ -110,7 +110,7 @@ Objects can be generated the same way as the other types.
 Example generating [search_result.json](https://github.com/hamstah/apitools/blob/master/data/schemas/search_result.json)
 ```python
 >>> store.load_folder("data/schemas/")
->>> print generator.random_value("search_result")
+>>> generator.random_value("search_result")
 {u'price': 21.980325774975253, u'name': 'wdvfXYrrt', u'reference': 26}
 ```
 
@@ -127,7 +127,7 @@ Or generating objects with arrays of other objects in them, see
 [search_resuts](https://github.com/hamstah/apitools/blob/master/data/schemas/search_results.json) 
 with an array of [search_result](https://github.com/hamstah/apitools/blob/master/data/schemas/search_result.json)
 ```python
->>> print generator.random_value("search_results")
+>>> generator.random_value("search_results")
 {
     u'total_results': 41, 
 	u'total_pages': 26, 
@@ -175,7 +175,7 @@ True
 ## Notes on the generation
 
 All the values are generated using the `random` module, so please don't use the generate values for anything
-requiring reliable randomness == *don't use it to generate passwords*.
+requiring reliable randomness == **don't use it to generate passwords**.
 
 To generate the data, the generator has to limit the range of possible values, so the values generated don't
 vary too wildly. The ranges are controlled by variables in `DataGenerator`. Feel free to tweak them, especially
@@ -233,6 +233,7 @@ Output
 Class to generate invalid data for a given schema
 
 Basically does the opposite of datagenerator. WIP, needs documentation and examples.
+
 ---
 
 # modelgenerator
@@ -256,7 +257,7 @@ To be able to use collections, make sure your schema has a `rel=instances` link 
 
 ## Usage
 
-```
+```bash
 $ python backbonemodelgenerator.py -h
 Usage: backbonemodelgenerator.py jsonfile1 [jsonfile2]...
 
@@ -272,7 +273,7 @@ Options:
 
 Outputs only the js code for the models/collections
 
-```javascript
+```bash
 $ python backbonemodelgenerator.py -t js data/schemas/message.json
 
 App.Models.Message = Backbone.Model.extend({
@@ -290,7 +291,7 @@ App.Collections.Messages = Backbone.Collection.extend({
 
 Wraps the js code into `$(document).ready()`
 
-```javascript
+```bash
 $ python backbonemodelgenerator.py -t wrapped data/schemas/message.json
 
 $(document).ready(function() {
@@ -450,7 +451,7 @@ Added message
 
 ```bash
 $ curl -i -X POST    http://0.0.0.0:5000/messages -d "recipient=07771818335&text=nice message"
-$ curl -i -X POST    http://0.0.0.0:5000/messages -d '{"recipient":"0123456780", "text":"test message"}' \
+$ curl -i -X POST    http://0.0.0.0:5000/messages -d '{"recipient":"01234567890", "text":"test"}' \
 	   -H "Content-Type: application/json"
 HTTP/1.0 201 CREATED
 Content-Type: application/json
@@ -552,6 +553,8 @@ Supports partial updates
 
 ```bash
 $ curl -i -X PUT     http://0.0.0.0:5000/messages/2 -d 'recipient=07771818336'
+$ curl -i -X PUT     http://0.0.0.0:5000/messages/1 -d '{"text":"foo"}' \
+          -H "Content-Type: application/json"
 HTTP/1.0 200 OK
 Content-Type: text/html; charset=utf-8
 Content-Length: 0
@@ -594,7 +597,7 @@ Date: Sun, 18 Nov 2012 19:43:48 GMT
 ### Trying to create or update unknown properties
 
 ```bash
-$ curl -i -X POST    http://0.0.0.0:5000/messages   -d "recipient=07771818335&tet=nice message&haxxy=foo"
+$ curl -i -X POST    http://0.0.0.0:5000/messages   -d "recipient=07771818335&tet=test&haxxy=foo"
 $ curl -i -X PUT     http://0.0.0.0:5000/messages/1 -d "haxxy=foo"
 HTTP/1.0 400 BAD REQUEST
 Content-Type: application/json
@@ -640,7 +643,7 @@ Date: Sun, 18 Nov 2012 20:06:00 GMT
 ### Trying to create a message in json with invalid data
 
 ```bash
-$ curl -i -X POST    http://0.0.0.0:5000/messages  -d '{"recipient":"01234567890", "text":"test message}' -H "Content-Type: application/json"
+$ curl -i -X POST    http://0.0.0.0:5000/messages  -d '{"recipient":"01234567890", "text":"test}' -H "Content-Type: application/json"
 HTTP/1.0 400 BAD REQUEST
 Content-Type: application/json
 Content-Length: 90
@@ -664,7 +667,7 @@ only be set by the server (read only).
 
 If there is a `rel=self` link and it contains a `{variable}` part, the variable name is used as the primary key.
 * If `variable` is the name of an existing property, this property is used as the primary key, and can be updated
-(*explicit key*)
+( *explicit key* )
 * Otherwise an *implicit* key is created using the `variable` name (stil read-only).
 
 ### Example of an explicit key
@@ -687,7 +690,7 @@ can be updated.
 	    "href":"books/{isbn}"
 	},
 ...
----
+```
 
 ### Example of implicit key
 

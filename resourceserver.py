@@ -92,7 +92,14 @@ class ResourceServer:
                     self.delete(res)
                     return ("",204)
                 elif request.method == "PUT":
-                    for key, value in dict(request.form.items()).items():
+                    if len(request.form.items()):
+                        attribs = dict(request.form.items())
+                    elif len(request.data):
+                        attribs = json.loads(request.data)
+                    else:
+                        return input_error("empty body")
+                    print attribs
+                    for key, value in attribs.items():
                         # don't let the update change readonly
                         # properties like the primary key
                         if key not in res.properties:
