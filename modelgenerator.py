@@ -115,6 +115,9 @@ class ModelGenerator:
             # get the validator functions specific to the type
             method = getattr(self, attr_name)
             tests = method(schema)
+
+            if "enum" in schema:
+                  tests["enum"] = (lambda value, values: value in values, "%(value)s is not in the enum list")
             return self.generate_validator_from_tests(name, schema, tests)
 
       def generate_validator_from_tests(self, name, schema, tests):
