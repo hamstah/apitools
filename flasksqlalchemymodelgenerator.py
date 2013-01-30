@@ -1,7 +1,8 @@
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy, orm
 
-from modelgenerator import ModelGenerator, ValidationError, UnknownPropertyError, MissingRequiredPropertyError
+from modelgenerator import ModelGenerator, UnknownPropertyError, MissingRequiredPropertyError
+from validation import generate_validator_for_property, ValidationError
 
 class FlaskSQLAlchemyModelGenerator(ModelGenerator):
 
@@ -19,7 +20,7 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
             attribs[property_name] = self.generate_column(db, property_schema, 
                                                           property_name==key_name)
 
-            validator = self.generate_validator(property_name, property_schema)
+            validator = generate_validator_for_property(property_name, property_schema)
             if validator:
                 attribs[validator.__name__] = orm.validates(property_name)(validator)
 
