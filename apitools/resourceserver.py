@@ -7,7 +7,8 @@ import re
 import sys
 
 from flasksqlalchemymodelgenerator import FlaskSQLAlchemyModelGenerator
-from modelgenerator import ValidationError, UnknownPropertyError, MissingRequiredPropertyError, ReadOnlyPropertyError
+from modelgenerator import UnknownPropertyError, MissingRequiredPropertyError, ReadOnlyPropertyError
+from validation import ValidationError
 import utils
 
 class ResourceServer:

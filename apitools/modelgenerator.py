@@ -1,10 +1,7 @@
-import re
-
+import json
 import utils
 
-class ValidationError(Exception):
-      def __init__(self, type_name, value, message):
-            Exception.__init__(self, "'%s' is an invalid %s value: %s"%(value, type_name, message))
+from validation import generate_validator_for_property
 
 class UnknownPropertyError(Exception):
       def __init__(self, type_name, property_name):
@@ -20,6 +17,53 @@ class ReadOnlyPropertyError(Exception):
       def __init__(self, type_name, property_name):
             Exception.__init__(self, "%s is read only in %s"%(property_name,type_name))
             self.property_name = property_name
+
+class Model(object):
+      
+      def __init__(self, **kwargs):
+            if not hasattr(self, "__properties"):
+                  raise Exception("Missing properties, can't validate instance")
+
+            properties = getattr(self, "__properties")
+      
+            # set the attributes
+            for key, value in kwargs.items():
+                  setattr(self, key, value)
+
+            # check that all the required args are present
+            for required_prop in [prop_key for prop_key, prop_schema in properties.items()
+                                  if prop_schema.get("required",False)]:
+                  if required_prop not in kwargs.keys():
+                        raise MissingRequiredPropertyError(self.__class__.__name__, required_prop)
+
+      def __repr__(self):
+            properties = getattr(self, "__properties")
+            return "<%s %s>"%(self.__class__.__name__,
+                       ','.join(["%s=%s"%(attr_name, getattr(self, attr_name))
+                                 for attr_name in sorted(properties.keys())]))
+            
+      def __setattr__(self, name, value):
+            """Validates the attribute before accepting it.
+            Can throw the following exceptions
+            * UnknownPropertyError if the attribute is invalid
+            * MissingRequiredPropertyError if a required attribute is omitted
+            * ValidationError if the attribute value isn't valid
+            """
+            assert hasattr(self, "__validators") and hasattr(self, "__properties")
+            validators = getattr(self,"__validators")
+            properties = getattr(self,"__properties")
+
+            if name not in properties:
+                  raise UnknownPropertyError(self.__class__.__name__,name)
+            
+            # validates the data
+            if name in validators:
+                  validators[name](self, name, value)
+                  
+            self.__dict__[name] = value
+
+      def to_dict(self):
+            return { key: getattr(self, key) for key in getattr(self, "__properties").keys()}
 
 class ModelGenerator:
 
@@ -107,73 +151,26 @@ class ModelGenerator:
             attribs["key_name"] = key_name
             return attribs
 
-      def generate_validator(self, name, schema):
-            attr_name = "%s_tests"%schema["type"]
-            if not hasattr(self, attr_name):
-                  return None
-
-            # get the validator functions specific to the type
-            method = getattr(self, attr_name)
-            tests = method(schema)
-            return self.generate_validator_from_tests(name, schema, tests)
-
-      def generate_validator_from_tests(self, name, schema, tests):
-            # only keep the relevant tests
-            found_tests = [test for test in tests.items()
-                           if test[0] in schema or test[0].startswith("__")]
-
-            # if no tests are found, no validator is required
-            if len(found_tests) == 0:
-                  return None
-            
-            def fn(self, key, value):
-                  for test_type, (test_fn, message) in sorted(found_tests,
-                                                              key=lambda test: test[0]):
-                        res = False
-                        test_value = schema.get(test_type, None)
-                        if not test_type.startswith("__"):
-                              res = test_fn(value,test_value)
-                        else:
-                              res = test_fn(value)
-
-                        if not res:
-                              raise ValidationError(name, value, message%{"test_type":test_type,
-                                                                          "test_value":test_value,
-                                                                          "value":value})
-                  return value
-            fn.__name__ = str("validate_%s"%(name))
-            return fn
-
-      def number_tests(self, schema):
-            tests = self.numeric_tests(schema)
-            tests["__isNumber"] = (lambda value: isinstance(value, (int, long, float)), "'%(value)s' is not a number")
-            return tests
-
-      def integer_tests(self, schema):
-            tests = self.numeric_tests(schema)
-            tests.update({
-                        "__isInt" : (lambda value: isinstance(value, (int, long)), "'%(value)s' is not an integer"),
-                        "divisibleBy" : (lambda value, div_by : value%div_by == 0, "not divisible by %(test_value)s")
-                        })
-            return tests
-
-      def numeric_tests(self, schema):
-            message = "%(test_type)s is %(test_value)s"
-            
-            tests = {
-                  "minimum": (lambda value,min_value: value >= min_value, message),
-                  "maximum": (lambda value,max_value: value <= max_value, message),
-                  "exclusiveMinimum" : (lambda value, is_exclusive: not is_exclusive or value != schema["minimum"], message),
-                  "exclusiveMaximum" : (lambda value, is_exclusive: not is_exclusive or value != schema["maximum"], message),              
-                  }    
-            return tests
-
-      def string_tests(self, schema):
-            tests = {
-                  "__isString": (lambda value: isinstance(value,basestring), "'%(value)s' is not a string"),
-                  "minLength": (lambda value, min_len: len(value) >= min_len, "length must be >= %(test_value)s"),
-                  "maxLength": (lambda value, max_len: len(value) <= max_len, "length must be <= %(test_value)s"),                  
-                  "pattern": (lambda value, pattern: re.match(pattern, value), "must match %(test_value)r"),
+      def generate_model(self, schema):
+            properties = schema.get("properties",{})
+            attribs = {
+                  "__validators":{},
+                  "__properties":properties,
                   }
-            return tests
+
+            # add columns and validators from the schema properties
+            for property_name, property_schema in properties.items():
+                  attribs[property_name] = property_schema.get("default", None)
+                  validator = generate_validator_for_property(property_name, property_schema)
+                  if validator:
+                        attribs["__validators"][property_name] = validator
+
+            return type(str(schema["name"]), (Model,), attribs)
+
+if __name__ == "__main__":
+      generator = ModelGenerator()
+      schema = json.loads(open("data/schemas/book.json").read())
+      Book = generator.generate_model(schema)
+      
+      print Book(authors="hhh",isbn="1234567890123",title="jjj")
 
