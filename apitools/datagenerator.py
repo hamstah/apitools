@@ -36,7 +36,7 @@ class DataGenerator:
             return self.schemas_store.schema(type_name, True)
         return None
     
-    def random_number(self, schema={}):
+    def random_number(self, schema=dict()):
         minimum = schema.get("minimum", self.number_range[0])
         maximum = schema.get("maximum", self.number_range[1])
 
@@ -69,7 +69,7 @@ class DataGenerator:
 
         return schema
 
-    def random_integer(self, schema={}):
+    def random_integer(self, schema=dict()):
         minimum = schema.get("minimum", self.number_range[0])
         maximum = schema.get("maximum", self.number_range[1])
         divisible_by = schema.get("divisibleBy", 1)
@@ -88,10 +88,10 @@ class DataGenerator:
         
         return random.randint(minimum/abs(divisible_by), maximum/abs(divisible_by))*divisible_by
 
-    def random_boolean(self, schema={}):
+    def random_boolean(self, schema=dict()):
         return bool(random.getrandbits(1))
 
-    def random_string(self, schema={}):
+    def random_string(self, schema=dict()):
         pattern = schema.get("pattern",None)
         if "pattern" in schema:
             return rstr.xeger(schema["pattern"])
