@@ -3,7 +3,7 @@
 import random
 import re
 import string
-from datagenerator import DataGenerator
+from .datagenerator import DataGenerator
 
 class InvalidDataGenerator:
 
@@ -13,7 +13,7 @@ class InvalidDataGenerator:
                                 "str 5", "str5",
                                 ]
       invalid_number_values = ["1.23 ", " 123.45", " 123.45 ", "123str.45"]
-      invalid_non_string_values = [" ", "'", "&&", "||", u"☃",">","</","<!--","*", ".", ""]
+      invalid_non_string_values = [" ", "'", "&&", "||", "☃",">","</","<!--","*", ".", ""]
 
       invalid_strings = 10
 
@@ -21,7 +21,7 @@ class InvalidDataGenerator:
             self.data_generator = DataGenerator()
 
       def invalid_value(self, schema):
-            if isinstance(schema, basestring):
+            if isinstance(schema, str):
                   schema = self.get_schema(schema)
             method = getattr(self, "invalid_%s"%schema["type"])
             
@@ -85,7 +85,7 @@ class InvalidDataGenerator:
                         length = random.randint(0,100)
                         gen = ''.join(random.choice(string.printable) for x in range(length))
 
-                        print gen
+                        print(gen)
                         if gen not in invalids and not r_pattern.match(gen):
 
                               invalids.append(gen)
@@ -98,6 +98,6 @@ class InvalidDataGenerator:
 
 if __name__ == "__main__":
       generator = InvalidDataGenerator()
-      print generator.invalid_number()
-      print generator.invalid_string({"pattern":"^[a-zA-Z]*$"})
+      print(generator.invalid_number())
+      print(generator.invalid_string({"pattern":"^[a-zA-Z]*$"}))
 

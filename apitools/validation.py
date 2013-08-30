@@ -10,14 +10,14 @@ class ValidationError(Exception):
 def number_tests(schema):
     tests = numeric_tests(schema)
     tests["__isNumber"] = (lambda value: isinstance(value, (
-        int, long, float)), "'%(value)s' is not a number")
+        int, float)), "'%(value)s' is not a number")
     return tests
 
 
 def integer_tests(schema):
     tests = numeric_tests(schema)
     tests.update({
-                "__isInt": (lambda value: isinstance(value, (int, long)), "'%(value)s' is not an integer"),
+                "__isInt": (lambda value: isinstance(value, int), "'%(value)s' is not an integer"),
                 "divisibleBy": (lambda value, div_by: value %div_by == 0, "not divisible by %(test_value)s")
                 })
     return tests
@@ -48,7 +48,7 @@ def string_tests(schema):
 def generate_validator_from_tests(prop_name, schema, tests):
     """Combine test functions into a single validator"""
     # only keep the relevant tests
-    found_tests = [(name, test) for (name, test) in tests.items()
+    found_tests = [(name, test) for (name, test) in list(tests.items())
                    if name in schema or name.startswith("__")]
 
     # if no tests are found, no validator is required

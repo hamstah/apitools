@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(__file__),"requirements.txt")) as req_fil
 
 setup(
     name='apitools',
-    version='0.1.1',
+    version='0.1.2',
     author='Nicolas Esteves',
     author_email='hamstahguru@gmail.com',
     packages=['apitools'],

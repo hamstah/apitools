@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0,os.path.join(os.path.dirname(__file__),"dependencies/rstr"))
 
-from schemasstore import SchemasStore
+from .schemasstore import SchemasStore
 
 import rstr
 
@@ -23,7 +23,7 @@ class DataGenerator:
         self.schemas_store = schemas_store
 
     def random_value(self, schema):
-        if isinstance(schema, basestring):
+        if isinstance(schema, str):
             schema = self.get_schema(schema)
         method = getattr(self, "random_%s"%schema["type"])
         
@@ -141,7 +141,7 @@ class DataGenerator:
     def random_object(self, schema):
         obj = {}
 
-        for prop_name, prop_schema in schema.get("properties",[]).items():
+        for prop_name, prop_schema in list(schema.get("properties",[]).items()):
             if prop_schema.get("required",False) or random.random() <= self.not_required_probability:
                 obj[prop_name] = self.random_value(prop_schema)
         return obj
@@ -153,32 +153,32 @@ if __name__ == "__main__":
 
     # Generates random instances of basic types
     for basic_type in generator.basic_types:
-        print generator.random_value(basic_type)
+        print(generator.random_value(basic_type))
 
     # Same with basic properties
-    print generator.random_value({"type":"number", "minimum":50})
-    print generator.random_value({"type":"integer", "divisibleBy":-23, "minimum":-69})
-    print generator.random_value({"type":"string", "maxLength":20, "minLength":15})
+    print(generator.random_value({"type":"number", "minimum":50}))
+    print(generator.random_value({"type":"integer", "divisibleBy":-23, "minimum":-69}))
+    print(generator.random_value({"type":"string", "maxLength":20, "minLength":15}))
     
     # Generates a random array of string
-    print generator.random_value({"type":"array", "items": {"type":"string"}})
+    print(generator.random_value({"type":"array", "items": {"type":"string"}}))
 
     store = SchemasStore()
     store.load_folder("data/schemas/")
     generator.schemas_store = store
     
     # Generate a random object defined in data/schemas/search_results.json
-    print generator.random_value("search_results")
+    print(generator.random_value("search_results"))
 
     # Generates an array of search_result
-    print generator.random_value({"type":"array", "items":{"type":"search_result"}})
+    print(generator.random_value({"type":"array", "items":{"type":"search_result"}}))
 
     store.add_schema({"type":"integer", "name":"small_integer", "minimum":0,"maximum":9})
-    print generator.random_value({"type":"array", "uniqueItems":True, "minItems":10, "items":{"type":"small_integer"}})
+    print(generator.random_value({"type":"array", "uniqueItems":True, "minItems":10, "items":{"type":"small_integer"}}))
 
-    print generator.random_value({"type":"string", "pattern": "^[a-zA-Z]{10}[0-5]{,7}$"})
+    print(generator.random_value({"type":"string", "pattern": "^[a-zA-Z]{10}[0-5]{,7}$"}))
 
     r_schema = generator.random_schema()
-    print r_schema
+    print(r_schema)
 
-    print generator.random_value(r_schema)
+    print(generator.random_value(r_schema))

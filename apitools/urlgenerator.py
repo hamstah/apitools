@@ -1,8 +1,8 @@
 import re
 import itertools
 
-from datagenerator import DataGenerator
-from schemasstore import SchemasStore
+from .datagenerator import DataGenerator
+from .schemasstore import SchemasStore
 
 class UrlGenerator:
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
       
       # generate urls for the links in book
       generator = UrlGenerator()
-      print generator.generate_valid(store.schema("book",True))
+      print(generator.generate_valid(store.schema("book",True)))
 
                         
                         

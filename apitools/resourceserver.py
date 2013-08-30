@@ -6,10 +6,10 @@ import json
 import re
 import sys
 
-from flasksqlalchemymodelgenerator import FlaskSQLAlchemyModelGenerator
-from modelgenerator import UnknownPropertyError, MissingRequiredPropertyError, ReadOnlyPropertyError
-from validation import ValidationError
-import utils
+from .flasksqlalchemymodelgenerator import FlaskSQLAlchemyModelGenerator
+from .modelgenerator import UnknownPropertyError, MissingRequiredPropertyError, ReadOnlyPropertyError
+from .validation import ValidationError
+from . import utils
 
 class ResourceServer:
 
@@ -62,7 +62,7 @@ class ResourceServer:
             self.app.add_url_rule(href, fn.__name__, fn)
 
         def input_error(error, code=400):
-            ret = jsonify({"error":unicode(error)})
+            ret = jsonify({"error":str(error)})
             ret.status_code = code
             return ret
 
@@ -79,7 +79,7 @@ class ResourceServer:
             # returns an instance of the object by key
             # if used with OPTIONS, returns the json-schema
             def r_self(**kwargs):
-                if len(kwargs.keys()) != 1:
+                if len(list(kwargs.keys())) != 1:
                     raise Exception("Self link with multiple arguments not supported")
                 res = model.query.filter_by(**kwargs).first()
                 if not res:
@@ -93,14 +93,14 @@ class ResourceServer:
                     self.delete(res)
                     return ("",204)
                 elif request.method == "PUT":
-                    if len(request.form.items()):
-                        attribs = dict(request.form.items())
+                    if len(list(request.form.items())):
+                        attribs = dict(list(request.form.items()))
                     elif len(request.data):
                         attribs = json.loads(request.data)
                     else:
                         return input_error("empty body")
-                    print attribs
-                    for key, value in attribs.items():
+                    print(attribs)
+                    for key, value in list(attribs.items()):
                         # don't let the update change readonly
                         # properties like the primary key
                         if key not in res.properties:
@@ -126,8 +126,8 @@ class ResourceServer:
                 try:
                     # this is ok as the model checks the input in __init__
 
-                    if len(request.form.items()):
-                        attribs = dict(request.form.items())
+                    if len(list(request.form.items())):
+                        attribs = dict(list(request.form.items()))
                     elif len(request.data):
                         attribs = json.loads(request.data)
                     else:
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     for path in sys.argv[1:]:
         schema = json.loads(open(path).read())
         server.add_resource(schema)
-        print "Added %s"%schema["name"]
+        print("Added %s"%schema["name"])
 
     server.db.create_all()
     server.run(debug=True)

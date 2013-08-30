@@ -1,7 +1,7 @@
 import json
-import utils
+from . import utils
 
-from validation import generate_validator_for_property
+from .validation import generate_validator_for_property
 
 
 class UnknownPropertyError(Exception):
@@ -34,13 +34,13 @@ class Model(object):
         properties = getattr(self, "__properties")
 
         # set the attributes
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(self, key, value)
 
         # check that all the required args are present
-        for required_prop in [prop_key for prop_key, prop_schema in properties.items()
+        for required_prop in [prop_key for prop_key, prop_schema in list(properties.items())
                               if prop_schema.get("required", False)]:
-            if required_prop not in kwargs.keys():
+            if required_prop not in list(kwargs.keys()):
                 raise MissingRequiredPropertyError(
                     self.__class__.__name__, required_prop)
 
@@ -71,7 +71,7 @@ class Model(object):
         self.__dict__[name] = value
 
     def to_dict(self):
-        return {key: getattr(self, key) for key in getattr(self, "__properties").keys()}
+        return {key: getattr(self, key) for key in list(getattr(self, "__properties").keys())}
 
 
 class ModelGenerator:
@@ -83,7 +83,7 @@ class ModelGenerator:
 
         def init(obj, **kwargs):
             # set the attributes
-            for key, value in kwargs.items():
+            for key, value in list(kwargs.items()):
                 if key not in properties:
                     raise UnknownPropertyError(schema["name"], key)
                     if key == key_name and implicit_key:
@@ -92,9 +92,9 @@ class ModelGenerator:
                 setattr(obj, key, value)
 
             # check that all the required args are present
-            for required_prop in [prop_key for prop_key, prop_schema in properties.items()
+            for required_prop in [prop_key for prop_key, prop_schema in list(properties.items())
                                   if prop_schema.get("required", False)]:
-                if required_prop not in kwargs.keys():
+                if required_prop not in list(kwargs.keys()):
                     raise MissingRequiredPropertyError(
                         schema["name"], required_prop)
 
@@ -105,16 +105,16 @@ class ModelGenerator:
             "__repr__": lambda obj:
             "<%s %s>" % (obj.__class__.__name__,
                          ','.join(["%s=%s" % (attr_name, getattr(obj, attr_name))
-                                   for attr_name in properties.keys()])),
+                                   for attr_name in list(properties.keys())])),
             "properties": properties,
             "properties_values": lambda obj:
             dict((
-                k, v) for k, v in obj.__dict__.iteritems(
-                ) if k in properties.keys()),
+                k, v) for k, v in obj.__dict__.items(
+                ) if k in list(properties.keys())),
             "updatable": lambda obj, key:
-            key in properties.keys() and key != obj.key_name,
+            key in list(properties.keys()) and key != obj.key_name,
             "writable": lambda obj, key:
-            key in properties.keys() and key != obj.key_name or not obj[
+            key in list(properties.keys()) and key != obj.key_name or not obj[
                 "implicit_key"],
             "implicit_key": implicit_key,
             "key_value": lambda obj:
@@ -139,7 +139,7 @@ class ModelGenerator:
         # - the json-schema format with root in links[<rel>]
         # - add helper lambdas to generate actual links under link_<rel>
         root = attribs["links"]["root"] = rel_links["root"]
-        for rel, (href, template_href) in rel_links.items():
+        for rel, (href, template_href) in list(rel_links.items()):
             if rel != "root":
                 (json_base, template_base) = root
                 if href:
@@ -154,7 +154,7 @@ class ModelGenerator:
             key_name = utils.get_resource_key(schema)
         except Exception:
             key_name = "id"
-            while key_name in properties.keys():
+            while key_name in list(properties.keys()):
                 key_name = '_' + key_name
 
         # add a new property for the key if it doesn't exist
@@ -173,7 +173,7 @@ class ModelGenerator:
         }
 
         # add columns and validators from the schema properties
-        for property_name, property_schema in properties.items():
+        for property_name, property_schema in list(properties.items()):
             attribs[property_name] = property_schema.get("default", None)
             validator = generate_validator_for_property(
                 property_name, property_schema)
@@ -187,4 +187,4 @@ if __name__ == "__main__":
     schema = json.loads(open("data/schemas/book.json").read())
     Book = generator.generate_model(schema)
 
-    print Book(authors="hhh", isbn="1234567890123", title="jjj")
+    print(Book(authors="hhh", isbn="1234567890123", title="jjj"))

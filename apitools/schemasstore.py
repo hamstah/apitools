@@ -11,7 +11,7 @@ class SchemasStore:
             if isinstance(schema, dict):
                 j_schema = json.dumps(schema)
                 self.schemas[schema["name"]] = (j_schema, schema)
-            elif isinstance(schema, basestring):
+            elif isinstance(schema, str):
                 d_schema = json.loads(schema)
                 self.schemas[d_schema["name"]] = (schema, d_schema)
             return True

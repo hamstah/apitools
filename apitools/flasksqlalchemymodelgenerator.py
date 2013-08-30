@@ -1,8 +1,8 @@
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy, orm
 
-from modelgenerator import ModelGenerator, UnknownPropertyError, MissingRequiredPropertyError
-from validation import generate_validator_for_property, ValidationError
+from .modelgenerator import ModelGenerator, UnknownPropertyError, MissingRequiredPropertyError
+from .validation import generate_validator_for_property, ValidationError
 
 class FlaskSQLAlchemyModelGenerator(ModelGenerator):
 
@@ -16,7 +16,7 @@ class FlaskSQLAlchemyModelGenerator(ModelGenerator):
         properties = schema.get("properties",{})
 
         # add columns and validators from the schema properties
-        for property_name, property_schema in properties.items():
+        for property_name, property_schema in list(properties.items()):
             attribs[property_name] = self.generate_column(db, property_schema, 
                                                           property_name==key_name)
 
@@ -90,14 +90,14 @@ if __name__ == "__main__":
     # <= 0 isn't allowed
     try:
         test.reference = 0
-        print "0 not allowed"
+        print("0 not allowed")
         assert False
     except ValidationError as e:
         pass
 
     try:
         test.reference = -7
-        print "<0 not allowed"
+        print("<0 not allowed")
         assert False
     except ValidationError as e:
         pass
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     # > 5 isn't allowed
     try:
         test.reference = 7
-        print ">6 not allowed"
+        print(">6 not allowed")
         assert False
     except ValidationError as e:
         pass
@@ -115,21 +115,21 @@ if __name__ == "__main__":
 
     try:
         test.reference = 5
-        print "5 not divisible by 2"
+        print("5 not divisible by 2")
         assert False
     except ValidationError as e:
         pass
 
     try:
         test.name = "a"
-        print "too short"
+        print("too short")
         assert False
     except ValidationError as e:
         pass
 
     try:
         test.name = "12345678"
-        print "too long"
+        print("too long")
         assert False
     except ValidationError as e:
         pass
@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
     try:
         test.code = "aaaa"
-        print "wrong pattern"
+        print("wrong pattern")
         assert False
     except ValidationError as e:
         pass

@@ -4,7 +4,7 @@ import optparse
 
 from jinja2 import Template
 
-from modelgenerator import ModelGenerator
+from .modelgenerator import ModelGenerator
 
 html_template = Template("""
 <!doctype html>
@@ -91,6 +91,6 @@ if __name__ == "__main__":
       (opts, args) = parser.parse_args()
 
       generator = BackboneModelGenerator()
-      print generator.generate([json.loads(open(f).read()) for f in args], opts.output_type)
+      print(generator.generate([json.loads(open(f).read()) for f in args], opts.output_type))
 
       
