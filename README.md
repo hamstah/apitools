@@ -9,7 +9,7 @@ All these tools are proofs of concept and work in progress, they need more exten
 # datagenerator 
 
 Class to generate random values given a json-schema.  
-Doesn't support all json-schema monstruousities, only a subset I find useful.  
+Doesn't support all json-schema monstrosities, only a subset I find useful.  
 See TODO.md for what is likely to be implemented next.  
 
 ## Examples
