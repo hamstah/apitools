@@ -107,7 +107,10 @@ class DataGenerator:
 
     def random_array(self, schema):
         items_type = schema["items"]["type"]
-        items_schema = self.get_schema(items_type)
+        if items_type == 'object':
+            items_schema = self.get_schema(schema["items"]["name"])
+        else:
+            items_schema = self.get_schema(items_type)
         if not items_schema:
             raise Exception("Don't know how to generate '%s'"%items_type)
 
