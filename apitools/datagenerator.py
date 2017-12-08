@@ -1,5 +1,6 @@
 import random
 import string
+import datetime
 import os
 import sys
 
@@ -26,7 +27,7 @@ class DataGenerator:
         if isinstance(schema, str):
             schema = self.get_schema(schema)
         method = getattr(self, "random_%s"%schema["type"])
-        
+
         return method(schema)
 
     def get_schema(self, type_name):
@@ -35,14 +36,14 @@ class DataGenerator:
         if self.schemas_store:
             return self.schemas_store.schema(type_name, True)
         return None
-    
+
     def random_number(self, schema=dict()):
         minimum = schema.get("minimum", self.number_range[0])
         maximum = schema.get("maximum", self.number_range[1])
 
         if minimum > maximum:
             maximum = minimum
-        
+
         return random.uniform(minimum, maximum)
 
     def random_schema(self):
@@ -85,7 +86,7 @@ class DataGenerator:
 
         if minimum > maximum:
             maximum = minimum
-        
+
         return random.randint(minimum/abs(divisible_by), maximum/abs(divisible_by))*divisible_by
 
     def random_boolean(self, schema=dict()):
@@ -93,6 +94,20 @@ class DataGenerator:
 
     def random_string(self, schema=dict()):
         pattern = schema.get("pattern",None)
+
+        if "enum" in schema:
+            size = len(schema["enum"])
+            rand = random.randint(0, size-1)
+            return schema["enum"][rand]
+
+        if "format" in schema:
+            str_format = schema["format"]
+            method_name = ("random_string_%s" % str_format).replace("-", "")
+            if method_name in [m_name for m_name in dir(self)
+                               if callable(getattr(self, m_name))]:
+                method = getattr(self, method_name)
+                return method(schema)
+
         if "pattern" in schema:
             return rstr.xeger(schema["pattern"])
 
@@ -101,9 +116,46 @@ class DataGenerator:
 
         if min_length > max_length:
             max_length = min_length
-        
+
         length = random.randint(min_length, max_length)
-        return ''.join(random.choice(self.string_charset) for x in range(length))
+        return ''.join(random.choice(self.string_charset)
+                       for x in range(length))
+
+    def random_string_date(self, schema):
+        return self.random_string_datetime(schema)[0:10]
+
+    def random_string_datetime(self, schema):
+        start = datetime.datetime(1900, 1, 1)
+        end = datetime.datetime(2099, 12, 31)
+        random_datetime = start + datetime.timedelta(
+            seconds=random.randint(0, int((end - start).total_seconds()))
+        )
+        return random_datetime.strftime('%Y-%m-%d %H:%M')
+
+    def random_string_email_(self, schema):
+        # implement and remove the final underscore in method name
+        # https://spacetelescope.github.io/understanding-json-schema/reference/string.html#built-in-formats
+        pass
+
+    def random_string_hostname_(self, schema):
+        # implement and remove the final underscore in method name
+        # https://spacetelescope.github.io/understanding-json-schema/reference/string.html#built-in-formats
+        pass
+
+    def random_string_ipv4_(self, schema):
+        # implement and remove the final underscore in method name
+        # https://spacetelescope.github.io/understanding-json-schema/reference/string.html#built-in-formats
+        pass
+
+    def random_string_ipv6_(self, schema):
+        # implement and remove the final underscore in method name
+        # https://spacetelescope.github.io/understanding-json-schema/reference/string.html#built-in-formats
+        pass
+
+    def random_string_uri_(self, schema):
+        # implement and remove the final underscore in method name
+        # https://spacetelescope.github.io/understanding-json-schema/reference/string.html#built-in-formats
+        pass
 
     def random_array(self, schema):
         items_type = schema["items"]["type"]
@@ -116,21 +168,21 @@ class DataGenerator:
 
         min_items = schema.get("minItems", self.array_range[0])
         max_items = schema.get("maxItems", self.array_range[1])
-        
+
         if min_items > max_items:
             max_items = min_items
 
         unique_items = schema.get("uniqueItems", False)
 
         count = random.randint(min_items, max_items)
-        
+
         if unique_items:
             max_tries = 100
             res = []
             for x in range(count):
                 tries = 0
                 while True:
-                    obj = self.random_value(items_schema)                
+                    obj = self.random_value(items_schema)
                     if obj not in res:
                         break
                     tries += 1
@@ -138,17 +190,19 @@ class DataGenerator:
                         raise Exception("Failed to generate the required number of unique items")
                 res.append(obj)
             return res
-                
+
         return [self.random_value(items_schema) for x in range(count)]
-    
+
     def random_object(self, schema):
         obj = {}
-
-        for prop_name, prop_schema in list(schema.get("properties",[]).items()):
-            if prop_schema.get("required",False) or random.random() <= self.not_required_probability:
+        props_list = list(schema.get("properties", {}).items())
+        for prop_name, prop_schema in props_list:
+            if prop_schema.get("required", False) or \
+               prop_name in schema.get("required") or \
+               random.random() <= self.not_required_probability:
                 obj[prop_name] = self.random_value(prop_schema)
         return obj
-    
+
 
 if __name__ == "__main__":
 
@@ -162,14 +216,14 @@ if __name__ == "__main__":
     print(generator.random_value({"type":"number", "minimum":50}))
     print(generator.random_value({"type":"integer", "divisibleBy":-23, "minimum":-69}))
     print(generator.random_value({"type":"string", "maxLength":20, "minLength":15}))
-    
+
     # Generates a random array of string
     print(generator.random_value({"type":"array", "items": {"type":"string"}}))
 
     store = SchemasStore()
     store.load_folder("data/schemas/")
     generator.schemas_store = store
-    
+
     # Generate a random object defined in data/schemas/search_results.json
     print(generator.random_value("search_results"))
 
